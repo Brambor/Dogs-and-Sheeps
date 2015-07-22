@@ -6,3 +6,6 @@ Easy way to change map dimensions and FPS.
 And badass old film look!
 
 Ideas: Graphic, rocks (these are on the way!), better searching for target (working on too), reproduction, dying of old age, zombie sheeps (not sure), tourists, Bacas, ghosts, water, and more!
+
+Short and small preview:
+![Screenshot](https://github.com/Brambor/Dogs-and-Sheeps/blob/Graphic/pic/Dogs%26Sheeps.gif?raw=true "Screenshot")

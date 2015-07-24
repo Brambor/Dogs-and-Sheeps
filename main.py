@@ -123,6 +123,49 @@ class Sprite():
             pass
         elif self.validate(newpos) == True:
             self.x, self.y = newpos
+#    def findit(self, x, y, B, X, out):
+#        if self.pole[x][y] == B and not self.done:
+#            self.done, self.bx, self.by = True, x, y
+#            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+#        elif self.pole[x][y] == X:
+#            self.pole[x][y] = out
+#            self.zmena = True
+#            self.bx, self.by = x, y
+#    def search(self, dest):
+#        self.pole = []
+#        for i in range(mapa.y):
+#            self.pole.append([])
+#            self.pole[i].extend([" "]*mapa.x)
+#        for obj in mapa.grass:
+#            self.pole[obj.x][obj.y] = obj.znak
+#        for obj in mapa.objs + mapa.stone:
+#            self.pole[obj.x][obj.y] = obj.znak
+#        self.pole[self.x][self.y] = "$"
+#        self.cislo, self.znaky = 0, ["$"] ###
+#        for i in range(mapa.x*mapa.y):
+#            self.znaky.append(str(i))
+#        self.done, self.zmena = False, False
+#        while self.zmena or (not self.done):
+#            self.zmena = False
+#            for i in range(mapa.y):
+#                for i2 in range(mapa.x):
+#                    if self.pole[i-1][i2-1] == self.znaky[self.cislo]:
+#                        c, d = i-1, i2-1
+#                        self.findit(c + 1, d, dest, " ", self.znaky[self.cislo + 1])
+#                        self.findit(c - 1, d, dest, " ", self.znaky[self.cislo + 1])
+#                        self.findit(c, d + 1, dest, " ", self.znaky[self.cislo + 1])
+#                        self.findit(c, d - 1, dest, " ", self.znaky[self.cislo + 1])
+#            self.cislo += 1
+#    def findback(self):
+#        for i in range(self.cislo):
+#            c, d = self.bx, self.by
+#            self.cislo -= 1
+#            self.findit(c + 1, d, "0", str(self.cislo), "x")
+#            self.findit(c - 1, d, "0", str(self.cislo), "x")
+#            self.findit(c, d + 1, "0", str(self.cislo), "x")
+#            self.findit(c, d - 1, "0", str(self.cislo), "x")
+#        c, d = self.bx, self.by
+#        return (c,d)
 
 class Dog(Sprite):
     def __init__(self, y, x, mapa):
@@ -160,14 +203,16 @@ class Sheep(Sprite):
             self.eat(".", self.eatthat)
             goto = None
         else:
-            gofor = list(filter(lambda obj: obj.znak == ".", mapa.grass)) ### jen mapa.grass?
+            gofor = mapa.grass
             if len(gofor) == 0:
                 beh = randint(0, self.run)
                 goto = self.runrand(beh)
             else:
-                self.closest(gofor)
-                go = self.runto()
-                goto = (go[0], go[1])
+                self.closest(gofor) #
+                go = self.runto() #
+                goto = (go[0], go[1]) #
+#                self.search(".")
+#                goto = self.findback()
         return goto
 
 class Corpse(Sprite):
@@ -219,9 +264,11 @@ mapa.update()
 mapa.draw()
 time.sleep(1.5)
 while True:
+#    a = time.time()
     pygame.time.Clock().tick(values.FPS)
     for event in pygame.event.get():
         if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
             sys.exit()
     mapa.update()
     mapa.draw()
+#    print(time.time() - a)

@@ -6,7 +6,7 @@ import pygame
 
 pygame.init()
 screen = pygame.display.set_mode((values.map_x * 12, values.map_y * 8))
-pygame.display.set_caption("Dogs&Sheeps")
+pygame.display.set_caption("Dogs & Sheeps")
 #pygame.display.set_icon(pygame.image.load("pic/corpse.png")) #Later, I don't want to do it now...
 bg_color=(0,0,0)
 
@@ -14,7 +14,7 @@ class Map():
     def __init__(self, y, x):
         self.x, self.y = x, y
         self.objs, self.corpses, self.grass, self.stone, self.ID = [], [], [], [], 0
-        self.wait = randint(1, 10)
+        self.wait = randint(1, values.Grass_spawn_rate)
         self.znaky = ["$"]
         for i in range(self.x*self.y):
             self.znaky.append(str(i))
@@ -58,7 +58,7 @@ class Map():
             obj.update()
         self.wait -= 1
         if self.wait == 0:
-            self.wait = randint(1, 10)
+            self.wait = randint(1, values.Grass_spawn_rate)
             self.addg(Grass(randint(1, self.x - 2), randint(1, self.y - 2), self))
         
 class Sprite():
@@ -66,7 +66,6 @@ class Sprite():
         self.y, self.x = y, x
         self.znak = znak
         self.mapa = mapa
-        self.hungry = 50
         self.priority = "eat"
         self.img = pygame.image.load("pic/"+image).convert_alpha()
         self.rect = self.img.get_rect()
@@ -103,11 +102,16 @@ class Sprite():
         elif 75 <= beh and beh < 100:
             return (self.x - 1, self.y)
     def hunger(self):
-        self.hungry -= 2
+        if self.znak == "S":
+            self.hungry -= values.Sheep_hungry
+        elif self.znak == "D":
+            self.hungry -= values.Dog_hungry
         if self.hungry <= 0:
             self.mapa.addc(Corpse(self.y, self.x, mapa, self.food))
             self.mapa.objs.remove(self)
-        elif self.hungry < 250:
+        elif self.znak == "S" and self.hungry < values.Sheep_I_am_hungry:
+            self.priority = "eat"
+        elif self.znak == "D" and self.hungry < values.Dog_I_am_hungry:
             self.priority = "eat"
     def eat(self, eatit, toeat):
         for obj in self.mapa.corpses + self.mapa.grass:
@@ -118,7 +122,9 @@ class Sprite():
                     toeat = obj.food
                 obj.food -= toeat
                 self.hungry += toeat
-                if self.hungry >= 350:
+                if self.znak == "S" and self.hungry >= values.Sheep_stomach:
+                    self.priority = "augment"
+                elif self.znak == "D" and self.hungry >= values.Dog_stomach:
                     self.priority = "augment"
                 return
     def validate(self, goto):
@@ -182,7 +188,7 @@ class Sprite():
             if abs(self.x - obj.x) + abs(self.y - obj.y) == 1:
                 if close:
                     return True
-                self.hungry, obj.hungry = self.hungry - 200, obj.hungry - 200
+                self.hungry, obj.hungry = self.hungry - values.Sheep_rp_food_consume, obj.hungry - values.Sheep_rp_food_consume
                 self.priority, obj.priority = ["eat"]*2
                 mapa.add(Sheep(self.y, self.x, self.mapa.ID, mapa))
                 return
@@ -191,14 +197,15 @@ class Dog(Sprite):
     def __init__(self, y, x, ID, mapa):
         super().__init__("D", y, x, mapa, "dog.png")
         self.ID = ID
-        self.food = 20
-        self.hungry = 100
+        self.food = values.Dog_corpse_food
+        self.hungry = values.Dog_start_food
+        self.eatthat = values.Dog_eat
     def move(self):
         self.hunger()
         goto = None
         if self.priority == "eat":
             if self.eat("C", 0):
-                self.eat("C", 10)
+                self.eat("C", self.eatthat)
             else:
                 sheeps = list(filter(lambda obj: obj.znak == "S", self.mapa.objs))
                 corpses = self.mapa.corpses
@@ -223,8 +230,9 @@ class Sheep(Sprite):
     def __init__(self, y, x, ID, mapa):
         super().__init__("S", y, x, mapa, "sheep.png")
         self.ID = ID
-        self.food = 400
-        self.eatthat = 5
+        self.food = values.Sheep_corpse_food
+        self.hungry = values.Sheep_start_food
+        self.eatthat = values.Sheep_eat
         self.run = 200
     def move(self):
         self.hunger()
@@ -263,13 +271,16 @@ class Corpse(Sprite):
 class Grass(Sprite):
     def __init__(self, y, x, mapa):
         super().__init__(".", y, x, mapa, "grass.png")
-        self.food = 5
+        self.food = values.Grass_food
     def move(self):
         if self.food == 0:
             self.mapa.grass.remove(self)
             return None
         else:
-            self.food += 1
+            if self.food < values.Grass_max:
+                self.food += values.Grass_grow
+                if self.food > values.Grass_max:
+                    self.food = values.Grass_max
             return None
 
 class Stone(Sprite):

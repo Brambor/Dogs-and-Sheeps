@@ -1,5 +1,6 @@
 from random import randint
-import time
+from time import sleep
+import queue
 import values
 import pygame
 
@@ -11,13 +12,17 @@ bg_color=(0,0,0)
 
 class Map():
     def __init__(self, y, x):
-        self.x, self.y = int(x), int(y)
-        self.objs = []
-        self.grass = []
-        self.stone = []
+        self.x, self.y = x, y
+        self.objs, self.corpses, self.grass, self.stone, self.ID = [], [], [], [], 0
         self.wait = randint(1, 10)
+        self.znaky = ["$"]
+        for i in range(self.x*self.y):
+            self.znaky.append(str(i))
     def add(self, obj):
         self.objs.append(obj)
+        self.ID += 1
+    def addc(self, obj):
+        self.corpses.append(obj)
     def addg(self, obj):
         self.grass.append(obj)
     def adds(self, obj):
@@ -35,16 +40,21 @@ class Map():
             obj.rect.topleft = (obj.x*12, obj.y*8)
             screen.blit(obj.img, obj.rect)
             
-        for obj in self.objs + self.stone:
+        for obj in self.stone + self.corpses:
+            obj.rect.topleft = (obj.x*12, obj.y*8)
+            screen.blit(obj.img, obj.rect)
+
+        for obj in self.objs: #str(obj.ID)
             obj.rect.topleft = (obj.x*12, obj.y*8)
             screen.blit(obj.img, obj.rect)
         
-        for i in range(x):
+        for i in range(x): # still needed for searching
             pole[i] = "".join(pole[i])
         pole = "\n".join(pole)
+
         pygame.display.update()
     def update(self):
-        for obj in self.objs + self.grass:
+        for obj in self.objs + self.grass + self.corpses:
             obj.update()
         self.wait -= 1
         if self.wait == 0:
@@ -56,7 +66,7 @@ class Sprite():
         self.y, self.x = y, x
         self.znak = znak
         self.mapa = mapa
-        self.hungry = 25
+        self.hungry = 50
         self.priority = "eat"
         self.img = pygame.image.load("pic/"+image).convert_alpha()
         self.rect = self.img.get_rect()
@@ -93,14 +103,14 @@ class Sprite():
         elif 75 <= beh and beh < 100:
             return (self.x - 1, self.y)
     def hunger(self):
-        self.hungry -= 1
-        if self.hungry == 0:
-            self.mapa.add(Corpse(self.y, self.x, mapa, self.food))
+        self.hungry -= 2
+        if self.hungry <= 0:
+            self.mapa.addc(Corpse(self.y, self.x, mapa, self.food))
             self.mapa.objs.remove(self)
-        elif self.hungry < 100:
+        elif self.hungry < 250:
             self.priority = "eat"
     def eat(self, eatit, toeat):
-        for obj in self.mapa.objs + self.mapa.grass:
+        for obj in self.mapa.corpses + self.mapa.grass:
             if abs(self.x - obj.x) + abs(self.y - obj.y) == 1 and eatit == obj.znak:
                 if toeat == 0:
                     return True
@@ -108,12 +118,12 @@ class Sprite():
                     toeat = obj.food
                 obj.food -= toeat
                 self.hungry += toeat
-                if self.hungry >= 200:
+                if self.hungry >= 350:
                     self.priority = "augment"
                 return
     def validate(self, goto):
         gut = True
-        for obj in self.mapa.objs + self.mapa.stone:
+        for obj in self.mapa.objs + self.mapa.corpses + self.mapa.stone:
             if goto[0] == obj.x and goto[1] == obj.y:
                 gut = False
         return gut
@@ -123,54 +133,66 @@ class Sprite():
             pass
         elif self.validate(newpos) == True:
             self.x, self.y = newpos
-#    def findit(self, x, y, B, X, out):
-#        if self.pole[x][y] == B and not self.done:
-#            self.done, self.bx, self.by = True, x, y
-#            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-#        elif self.pole[x][y] == X:
-#            self.pole[x][y] = out
-#            self.zmena = True
-#            self.bx, self.by = x, y
-#    def search(self, dest):
-#        self.pole = []
-#        for i in range(mapa.y):
-#            self.pole.append([])
-#            self.pole[i].extend([" "]*mapa.x)
-#        for obj in mapa.grass:
-#            self.pole[obj.x][obj.y] = obj.znak
-#        for obj in mapa.objs + mapa.stone:
-#            self.pole[obj.x][obj.y] = obj.znak
-#        self.pole[self.x][self.y] = "$"
-#        self.cislo, self.znaky = 0, ["$"] ###
-#        for i in range(mapa.x*mapa.y):
-#            self.znaky.append(str(i))
-#        self.done, self.zmena = False, False
-#        while self.zmena or (not self.done):
-#            self.zmena = False
-#            for i in range(mapa.y):
-#                for i2 in range(mapa.x):
-#                    if self.pole[i-1][i2-1] == self.znaky[self.cislo]:
-#                        c, d = i-1, i2-1
-#                        self.findit(c + 1, d, dest, " ", self.znaky[self.cislo + 1])
-#                        self.findit(c - 1, d, dest, " ", self.znaky[self.cislo + 1])
-#                        self.findit(c, d + 1, dest, " ", self.znaky[self.cislo + 1])
-#                        self.findit(c, d - 1, dest, " ", self.znaky[self.cislo + 1])
-#            self.cislo += 1
-#    def findback(self):
-#        for i in range(self.cislo):
-#            c, d = self.bx, self.by
-#            self.cislo -= 1
-#            self.findit(c + 1, d, "0", str(self.cislo), "x")
-#            self.findit(c - 1, d, "0", str(self.cislo), "x")
-#            self.findit(c, d + 1, "0", str(self.cislo), "x")
-#            self.findit(c, d - 1, "0", str(self.cislo), "x")
-#        c, d = self.bx, self.by
-#        return (c,d)
+    def search(self, dest, passit):
+        self.q, self.done, self.znaky, self.index = queue.Queue(), False, ["A"], 0
+        self.pole = []
+        self.q.put((0, self.y, self.x))
+        for i in range(self.mapa.y):
+            self.pole.append([])
+            self.pole[i].extend([" "]*self.mapa.x)
+        for obj in self.mapa.grass:
+            self.pole[obj.x][obj.y] = obj.znak
+        for obj in self.mapa.stone + self.mapa.corpses:
+            self.pole[obj.x][obj.y] = obj.znak
+        for obj in self.mapa.objs:
+            self.pole[obj.x][obj.y] = obj.znak + str(obj.ID)
+        self.pole[self.x][self.y] = "$"
+        if self.searchthere(dest, passit):
+            return self.searchback()
+        return None
+    def searchthere(self, dest, passit):
+        while not self.done:
+            if not self.q.empty():
+                me, x, y = self.q.get()
+                for pos in [[x, y - 1], [x + 1, y], [x, y + 1], [x - 1, y]]:
+                    self.searchit(pos[0], pos[1], me + 1, dest, passit)
+            else:
+                return False
+        return True
+    def searchit(self, x, y, next, dest, passit):
+        place = self.pole[y][x]
+        if place in passit:
+            self.pole[y][x] = self.mapa.znaky[next]
+            self.q.put((next, x, y))
+        elif place in dest:
+            self.done = True
+            self.destin, self.destx, self.desty = next, x, y
+    def searchback(self):
+        for i in range(self.destin - 1):
+            for e in [[self.destx, self.desty - 1], [self.destx + 1, self.desty], [self.destx, self.desty + 1], [self.destx - 1, self.desty]]:
+                self.findback(e[0], e[1])
+        return self.desty, self.destx
+    def findback(self, x, y):
+        place = self.pole[y][x]
+        if place == self.mapa.znaky[self.destin - 1]:
+            self.pole[y][x] = "X"
+            self.destin, self.destx, self.desty = self.destin - 1, x, y
+    def augment(self, znak, close = False):
+        for obj in self.opposites:
+            if abs(self.x - obj.x) + abs(self.y - obj.y) == 1:
+                if close:
+                    return True
+                self.hungry, obj.hungry = self.hungry - 200, obj.hungry - 200
+                self.priority, obj.priority = ["eat"]*2
+                mapa.add(Sheep(self.y, self.x, self.mapa.ID, mapa))
+                return
 
 class Dog(Sprite):
-    def __init__(self, y, x, mapa):
+    def __init__(self, y, x, ID, mapa):
         super().__init__("D", y, x, mapa, "dog.png")
+        self.ID = ID
         self.food = 20
+        self.hungry = 100
     def move(self):
         self.hunger()
         goto = None
@@ -178,41 +200,55 @@ class Dog(Sprite):
             if self.eat("C", 0):
                 self.eat("C", 10)
             else:
-                gofor = list(filter(lambda obj: (obj.znak == "S" or obj.znak == "C"), mapa.objs))
-                if len(gofor) == 0:
+                sheeps = list(filter(lambda obj: obj.znak == "S", self.mapa.objs))
+                corpses = self.mapa.corpses
+                if len(corpses) + len(sheeps) == 0:
                     beh = randint(0, 150)
                     goto = self.runrand(beh)
                 else:
+                    gofor = corpses
+                    if len(corpses) == 0:
+                        gofor = sheeps
                     self.closest(gofor)
                     goto = self.runto()
                     if goto == None:
-                        ox, oy = self.target.x, self.target.y
-                        self.mapa.add(Corpse(oy, ox, self.mapa, self.target.food))
+                        self.mapa.addc(Corpse(self.target.y, self.target.x, self.mapa, self.target.food))
                         self.mapa.objs.remove(self.target)
+        else:
+            beh = randint(0, 175)
+            goto = self.runrand(beh)
         return goto
 
 class Sheep(Sprite):
-    def __init__(self, y, x, mapa):
+    def __init__(self, y, x, ID, mapa):
         super().__init__("S", y, x, mapa, "sheep.png")
+        self.ID = ID
         self.food = 400
         self.eatthat = 5
         self.run = 200
     def move(self):
         self.hunger()
-        if self.eat(".", 0):
-            self.eat(".", self.eatthat)
-            goto = None
-        else:
-            gofor = mapa.grass
-            if len(gofor) == 0:
-                beh = randint(0, self.run)
-                goto = self.runrand(beh)
+        goto = None
+        if self.priority == "eat":
+            if self.eat(".", 0):
+                self.eat(".", self.eatthat)
+                goto = True
             else:
-                self.closest(gofor) #
-                go = self.runto() #
-                goto = (go[0], go[1]) #
-#                self.search(".")
-#                goto = self.findback()
+                gofor = self.mapa.grass
+                if len(gofor) != 0:
+                    goto = self.search(["."], [" "])
+        elif self.priority == "augment":
+            self.opposites = list(filter(lambda obj: obj.znak == "S" and obj.priority == "augment" and self.ID != obj.ID, self.mapa.objs))
+            if len(self.opposites) > 0:
+                if self.augment("S", True):
+                    self.augment("S")
+                else:
+                    goto = self.search([opp.znak + str(opp.ID) for opp in self.opposites], [" ", "."])
+        if goto == True:
+            goto = None
+        elif goto == None:
+            beh = randint(0, self.run)
+            goto = self.runrand(beh)
         return goto
 
 class Corpse(Sprite):
@@ -221,7 +257,7 @@ class Corpse(Sprite):
         self.food = food
     def move(self):
         if self.food == 0:
-            self.mapa.objs.remove(self)
+            self.mapa.corpses.remove(self)
         return None
 
 class Grass(Sprite):
@@ -243,10 +279,10 @@ class Stone(Sprite):
 mapa = Map(values.map_x, values.map_y)
 
 for i in range(values.Dogs):
-    mapa.add(Dog(randint(1, mapa.x-2), randint(1, mapa.y -2), mapa))
+    mapa.add(Dog(randint(1, mapa.x-2), randint(1, mapa.y -2), mapa.ID, mapa))
     
 for i in range(values.Sheep):
-    mapa.add(Sheep(randint(1, mapa.x-2), randint(1, mapa.y -2), mapa))
+    mapa.add(Sheep(randint(1, mapa.x-2), randint(1, mapa.y -2), mapa.ID, mapa))
     
 for i in range(values.Grass):
     mapa.addg(Grass(randint(1, mapa.x-2), randint(1, mapa.y -2), mapa))
@@ -254,7 +290,6 @@ for i in range(values.Grass):
 for i in range(mapa.y):
     mapa.adds(Stone(0, i, mapa))
     mapa.adds(Stone(mapa.x - 1, i, mapa))
-
 for i in range(1, mapa.x - 1):
     mapa.adds(Stone(i, 0, mapa))
     mapa.adds(Stone(i, mapa.y -1, mapa))
@@ -262,7 +297,7 @@ for i in range(1, mapa.x - 1):
 
 mapa.update()
 mapa.draw()
-time.sleep(1.5)
+sleep(1.5)
 while True:
 #    a = time.time()
     pygame.time.Clock().tick(values.FPS)
@@ -270,5 +305,5 @@ while True:
         if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
             sys.exit()
     mapa.update()
-    mapa.draw()
+    mapa.draw() # add FPS and dropped FPS
 #    print(time.time() - a)

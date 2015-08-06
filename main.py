@@ -3,16 +3,16 @@ from time import sleep
 import queue
 import values
 import pygame
+import sys
 
-pygame.init()
-screen = pygame.display.set_mode((values.map_x * 12, values.map_y * 8))
-pygame.display.set_caption("Dogs & Sheeps")
-#pygame.display.set_icon(pygame.image.load("pic/corpse.png")) #Later, I don't want to do it now...
-bg_color=(0,0,0)
 
 class Map():
     def __init__(self, y, x):
         self.x, self.y = x, y
+        pygame.init()
+        self.screen = pygame.display.set_mode((y * 12, x * 8))
+        pygame.display.init()
+        self.bg_color=(0,0,0)
         self.objs, self.corpses, self.grass, self.stone, self.ID = [], [], [], [], 0
         self.wait = randint(1, values.Grass_spawn_rate)
         self.znaky = ["$"]
@@ -30,7 +30,7 @@ class Map():
     def draw(self):
         x, y = self.x, self.y
 
-        screen.fill(bg_color)
+        self.screen.fill(self.bg_color)
         pole = []
         for i in range(x):
             pole.append([])
@@ -38,15 +38,11 @@ class Map():
         
         for obj in self.grass:
             obj.rect.topleft = (obj.x*12, obj.y*8)
-            screen.blit(obj.img, obj.rect)
+            self.screen.blit(obj.img, obj.rect)
             
-        for obj in self.stone + self.corpses:
+        for obj in self.objs + self.stone + self.corpses: #str(obj.ID)
             obj.rect.topleft = (obj.x*12, obj.y*8)
-            screen.blit(obj.img, obj.rect)
-
-        for obj in self.objs: #str(obj.ID)
-            obj.rect.topleft = (obj.x*12, obj.y*8)
-            screen.blit(obj.img, obj.rect)
+            self.screen.blit(obj.img, obj.rect)
         
         for i in range(x): # still needed for searching
             pole[i] = "".join(pole[i])
@@ -72,7 +68,7 @@ class Sprite():
     def move(self):
         pass            
     def closest(self, ents):
-        far = mapa.x * mapa.y
+        far = self.mapa.x * self.mapa.y
         for i in range(len(ents)):
             nfar = abs(ents[i].x - self.x) + abs(ents[i].y - self.y)
             if nfar < far:
@@ -107,7 +103,7 @@ class Sprite():
         elif self.znak == "D":
             self.hungry -= values.Dog_hungry
         if self.hungry <= 0:
-            self.mapa.addc(Corpse(self.y, self.x, mapa, self.food))
+            self.mapa.addc(Corpse(self.y, self.x, self.mapa, self.food))
             self.mapa.objs.remove(self)
         elif self.znak == "S" and self.hungry < values.Sheep_I_am_hungry:
             self.priority = "eat"
@@ -190,7 +186,7 @@ class Sprite():
                     return True
                 self.hungry, obj.hungry = self.hungry - values.Sheep_rp_food_consume, obj.hungry - values.Sheep_rp_food_consume
                 self.priority, obj.priority = ["eat"]*2
-                mapa.add(Sheep(self.y, self.x, self.mapa.ID, mapa))
+                self.mapa.add(Sheep(self.y, self.x, self.mapa.ID, self.mapa))
                 return
 
 class Dog(Sprite):
@@ -287,34 +283,41 @@ class Stone(Sprite):
     def __init__(self, y, x, mapa):
         super().__init__("@", y, x, mapa, "stone.png")
 
-mapa = Map(values.map_x, values.map_y)
+class Run():
+    def __init__(self, Map = Map, Dog = Dog, Grass = Grass, Stone = Stone, values= values):
+        mapa = Map(values.map_x, values.map_y)
 
-for i in range(values.Dogs):
-    mapa.add(Dog(randint(1, mapa.x-2), randint(1, mapa.y -2), mapa.ID, mapa))
-    
-for i in range(values.Sheep):
-    mapa.add(Sheep(randint(1, mapa.x-2), randint(1, mapa.y -2), mapa.ID, mapa))
-    
-for i in range(values.Grass):
-    mapa.addg(Grass(randint(1, mapa.x-2), randint(1, mapa.y -2), mapa))
+        for i in range(values.Dogs):
+            mapa.add(Dog(randint(1, mapa.x-2), randint(1, mapa.y -2), mapa.ID, mapa))
+            
+        for i in range(values.Sheep):
+            mapa.add(Sheep(randint(1, mapa.x-2), randint(1, mapa.y -2), mapa.ID, mapa))
+            
+        for i in range(values.Grass):
+            mapa.addg(Grass(randint(1, mapa.x-2), randint(1, mapa.y -2), mapa))
 
-for i in range(mapa.y):
-    mapa.adds(Stone(0, i, mapa))
-    mapa.adds(Stone(mapa.x - 1, i, mapa))
-for i in range(1, mapa.x - 1):
-    mapa.adds(Stone(i, 0, mapa))
-    mapa.adds(Stone(i, mapa.y -1, mapa))
+        for i in range(mapa.y):
+            mapa.adds(Stone(0, i, mapa))
+            mapa.adds(Stone(mapa.x - 1, i, mapa))
+        for i in range(1, mapa.x - 1):
+            mapa.adds(Stone(i, 0, mapa))
+            mapa.adds(Stone(i, mapa.y -1, mapa))
 
 
-mapa.update()
-mapa.draw()
-sleep(1.5)
-while True:
-#    a = time.time()
-    pygame.time.Clock().tick(values.FPS)
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
-            sys.exit()
-    mapa.update()
-    mapa.draw() # add FPS and dropped FPS
-#    print(time.time() - a)
+        mapa.update()
+        mapa.draw()
+        sleep(1.5)
+        go = True
+        while go:
+        #    a = time.time()
+            pygame.time.Clock().tick(values.FPS)
+            mapa.update()
+            mapa.draw() # add FPS and dropped FPS
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    go = False
+                elif event.type == pygame.QUIT:
+                    #print("Thanks for using!")
+                    #sleep(2)
+                    sys.exit()
+        #    print(time.time() - a)

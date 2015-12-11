@@ -1,18 +1,18 @@
 from random import randint
-from time import sleep
+from time import sleep, time
 import queue
 import values
-import pygame
 import sys
 
 
 class Map():
     def __init__(self, y, x):
         self.x, self.y = x, y
-        pygame.init()
-        self.screen = pygame.display.set_mode((y * 12, x * 8))
-        pygame.display.init()
-        self.bg_color=(0,0,0)
+        if ver == "graphic":
+           pygame.init()
+           self.screen = pygame.display.set_mode((y * 12, x * 8))
+           pygame.display.init() # is it needed?
+           self.bg_color=(0,0,0)
         self.objs, self.corpses, self.grass, self.stone, self.ID = [], [], [], [], 0
         self.wait = randint(1, values.Grass_spawn_rate)
         self.znaky = ["$"]
@@ -30,32 +30,43 @@ class Map():
     def draw(self):
         x, y = self.x, self.y
 
-        self.screen.fill(self.bg_color)
         pole = []
         for i in range(x):
             pole.append([])
             pole[i].extend([" "]*y)
-        
-        for obj in self.grass:
-            obj.rect.topleft = (obj.x*12, obj.y*8)
-            self.screen.blit(obj.img, obj.rect)
             
-        for obj in self.objs + self.stone + self.corpses: #str(obj.ID)
-            obj.rect.topleft = (obj.x*12, obj.y*8)
-            self.screen.blit(obj.img, obj.rect)
+        if ver == "graphic":
+           self.screen.fill(self.bg_color)
         
-        for i in range(x): # still needed for searching
-            pole[i] = "".join(pole[i])
-        pole = "\n".join(pole)
+           for obj in self.grass:
+               obj.rect.topleft = (obj.x*12, obj.y*8)
+               self.screen.blit(obj.img, obj.rect)
+            
+           for obj in self.objs + self.stone + self.corpses: #str(obj.ID)
+               obj.rect.topleft = (obj.x*12, obj.y*8)
+               self.screen.blit(obj.img, obj.rect)
 
-        pygame.display.update()
+           pygame.display.update()
+           
+        elif ver == "text":
+           for obj in self.grass:
+               pole[obj.y][obj.x] = obj.znak
+            
+           for obj in self.stone + self.corpses + self.objs:
+               pole[obj.y][obj.x] = obj.znak # if objs: str(obj ID)
+            
+           for i in range(x):
+               pole[i] = "".join(pole[i])
+           pole = "\n".join(pole)
+           print(pole, end = "")
+
     def update(self):
         for obj in self.objs + self.grass + self.corpses:
             obj.update()
         self.wait -= 1
         if self.wait == 0:
             self.wait = randint(1, values.Grass_spawn_rate)
-            self.addg(Grass(randint(1, self.x - 2), randint(1, self.y - 2), self))
+            self.addg(Grass(randint(1, self.x - 2), randint(1, self.y - 2), self)) # idea: grass not spawning on ocuped tiles .gramar.
         
 class Sprite():
     def __init__(self, znak, y, x, mapa, image):
@@ -63,13 +74,14 @@ class Sprite():
         self.znak = znak
         self.mapa = mapa
         self.priority = "eat"
-        self.img = pygame.image.load("pic/"+image).convert_alpha()
-        self.rect = self.img.get_rect()
+        if ver == "graphic":
+            self.img = pygame.image.load("pic/{}".format(image)).convert_alpha()
+            self.rect = self.img.get_rect()
     def move(self):
         pass            
     def closest(self, ents):
         far = self.mapa.x * self.mapa.y
-        for i in range(len(ents)):
+        for i in range(len(ents)): # min max?
             nfar = abs(ents[i].x - self.x) + abs(ents[i].y - self.y)
             if nfar < far:
                 far = nfar
@@ -124,11 +136,11 @@ class Sprite():
                     self.priority = "augment"
                 return
     def validate(self, goto):
-        gut = True
+        gut = True #
         for obj in self.mapa.objs + self.mapa.corpses + self.mapa.stone:
             if goto[0] == obj.x and goto[1] == obj.y:
-                gut = False
-        return gut
+                gut = False #return False
+        return gut #return True
     def update(self):
         newpos = self.move()
         if newpos == None:
@@ -140,15 +152,15 @@ class Sprite():
         self.pole = []
         self.q.put((0, self.y, self.x))
         for i in range(self.mapa.y):
-            self.pole.append([])
-            self.pole[i].extend([" "]*self.mapa.x)
+            self.pole.append([]) #merge these two lines
+            self.pole[i].extend([" "]*self.mapa.x) #is it slow?
         for obj in self.mapa.grass:
             self.pole[obj.x][obj.y] = obj.znak
         for obj in self.mapa.stone + self.mapa.corpses:
             self.pole[obj.x][obj.y] = obj.znak
         for obj in self.mapa.objs:
-            self.pole[obj.x][obj.y] = obj.znak + str(obj.ID)
-        self.pole[self.x][self.y] = "$"
+            self.pole[obj.x][obj.y] = obj.znak + str(obj.ID) #slow?
+        self.pole[self.x][self.y] = "$" #is $ needed?
         if self.searchthere(dest, passit):
             return self.searchback()
         return None
@@ -156,19 +168,22 @@ class Sprite():
         while not self.done:
             if not self.q.empty():
                 me, x, y = self.q.get()
-                for pos in [[x, y - 1], [x + 1, y], [x, y + 1], [x - 1, y]]:
+                for pos in [[x, y - 1], [x + 1, y], [x, y + 1], [x - 1, y]]: # tuple?
                     self.searchit(pos[0], pos[1], me + 1, dest, passit)
+                    #if self.done:break
             else:
                 return False
         return True
     def searchit(self, x, y, next, dest, passit):
         place = self.pole[y][x]
-        if place in passit:
+        #self.done = False
+        if place in passit: # next to => passit = []
             self.pole[y][x] = self.mapa.znaky[next]
             self.q.put((next, x, y))
         elif place in dest:
             self.done = True
             self.destin, self.destx, self.desty = next, x, y
+        #if passit == []: return self.done
     def searchback(self):
         for i in range(self.destin - 1):
             for e in [[self.destx, self.desty - 1], [self.destx + 1, self.desty], [self.destx, self.desty + 1], [self.destx - 1, self.desty]]:
@@ -209,14 +224,19 @@ class Dog(Sprite):
                     beh = randint(0, 150)
                     goto = self.runrand(beh)
                 else:
-                    gofor = corpses
+                    gofor = corpses #C
                     if len(corpses) == 0:
-                        gofor = sheeps
-                    self.closest(gofor)
-                    goto = self.runto()
-                    if goto == None:
-                        self.mapa.addc(Corpse(self.target.y, self.target.x, self.mapa, self.target.food))
-                        self.mapa.objs.remove(self.target)
+                        gofor = sheeps #S
+                    #for pos in [[self.x, self.y - 1], [self.x + 1, self.y], [self.x, self.y + 1], [self.x - 1, self.y]]:
+                    #    for obj in self.mapa.objs:
+                    #        if obj.x, obj.y == pos[0], pos[1]:
+                    #            Don't continue
+                    if True: #if do continue
+                        self.closest(gofor)# from here
+                        goto = self.runto()
+                        if goto == None:
+                            self.mapa.addc(Corpse(self.target.y, self.target.x, self.mapa, self.target.food))
+                            self.mapa.objs.remove(self.target)
         else:
             beh = randint(0, 175)
             goto = self.runrand(beh)
@@ -238,16 +258,16 @@ class Sheep(Sprite):
                 self.eat(".", self.eatthat)
                 goto = True
             else:
-                gofor = self.mapa.grass
+                gofor = self.mapa.grass#
                 if len(gofor) != 0:
-                    goto = self.search(["."], [" "])
+                    goto = self.search(["."], [" "])#
         elif self.priority == "augment":
             self.opposites = list(filter(lambda obj: obj.znak == "S" and obj.priority == "augment" and self.ID != obj.ID, self.mapa.objs))
             if len(self.opposites) > 0:
                 if self.augment("S", True):
                     self.augment("S")
                 else:
-                    goto = self.search([opp.znak + str(opp.ID) for opp in self.opposites], [" ", "."])
+                    goto = self.search([opp.znak + str(opp.ID) for opp in self.opposites], [" ", "."]) #format
         if goto == True:
             goto = None
         elif goto == None:
@@ -271,20 +291,23 @@ class Grass(Sprite):
     def move(self):
         if self.food == 0:
             self.mapa.grass.remove(self)
-            return None
         else:
             if self.food < values.Grass_max:
                 self.food += values.Grass_grow
                 if self.food > values.Grass_max:
                     self.food = values.Grass_max
-            return None
+        return None
 
 class Stone(Sprite):
     def __init__(self, y, x, mapa):
         super().__init__("@", y, x, mapa, "stone.png")
 
 class Run():
-    def __init__(self, Map = Map, Dog = Dog, Grass = Grass, Stone = Stone, values= values):
+    def __init__(self, version, Map = Map, Dog = Dog, Grass = Grass, Stone = Stone, values= values):
+        ver = version
+        global ver
+        if ver == "graphic":
+            import pygame
         mapa = Map(values.map_x, values.map_y)
 
         for i in range(values.Dogs):
@@ -301,7 +324,7 @@ class Run():
             mapa.adds(Stone(mapa.x - 1, i, mapa))
         for i in range(1, mapa.x - 1):
             mapa.adds(Stone(i, 0, mapa))
-            mapa.adds(Stone(i, mapa.y -1, mapa))
+            mapa.adds(Stone(i, mapa.y - 1, mapa))
 
 
         mapa.update()
@@ -309,15 +332,23 @@ class Run():
         sleep(1.5)
         go = True
         while go:
-        #    a = time.time()
-            pygame.time.Clock().tick(values.FPS)
+        #    a = time()
+            if ver == "graphic":
+                pygame.time.Clock().tick(values.FPS)
+            elif ver == "text":
+                wait = time()
             mapa.update()
             mapa.draw() # add FPS and dropped FPS
-            for event in pygame.event.get():
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                    go = False
-                elif event.type == pygame.QUIT:
-                    #print("Thanks for using!")
-                    #sleep(2)
-                    sys.exit()
+            if ver == "graphic":
+                for event in pygame.event.get():
+                    if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                        go = False
+                    elif event.type == pygame.QUIT:
+                        #print("Thanks for using!")
+                        #sleep(2)
+                        sys.exit()
+            elif ver == "text":
+                waitfor = 0.1 + time() - wait
+                if waitfor > 0:
+                    sleep(waitfor)
         #    print(time.time() - a)

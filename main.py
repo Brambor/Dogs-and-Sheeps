@@ -4,6 +4,10 @@ import queue
 import values
 import sys
 
+try:
+    import pygame
+except ImportError:
+    pass
 
 class Map():
     def __init__(self, y, x):
@@ -304,10 +308,9 @@ class Stone(Sprite):
 
 class Run():
     def __init__(self, version, Map = Map, Dog = Dog, Grass = Grass, Stone = Stone, values= values):
-        ver = version
         global ver
-        if ver == "graphic":
-            import pygame
+        ver = version
+
         mapa = Map(values.map_x, values.map_y)
 
         for i in range(values.Dogs):

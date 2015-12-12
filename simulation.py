@@ -28,7 +28,7 @@ try:
         place += 20
         buttons.add(button)
 
-	buttons.draw(screen)
+    buttons.draw(screen)
 
 except ImportError:
     ver = "text"

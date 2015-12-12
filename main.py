@@ -62,6 +62,7 @@ class Map():
            for i in range(x):
                pole[i] = "".join(pole[i])
            pole = "\n".join(pole)
+           print()
            print(pole, end = "")
 
     def update(self):

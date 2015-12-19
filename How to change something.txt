@@ -1,2 +1,2 @@
-1 - open values.py (with notepad, editor or something like that)
+1 - open stuff/values.py (with notepad, editor or something like that)
 2 - change which number you want different (watch for the note after #)

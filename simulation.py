@@ -1,7 +1,7 @@
 import sys
-import values
 
-import main
+from stuff import main
+from stuff import values
 
 ver = "graphic"
 picnames = ["Play","Quit"]
@@ -22,7 +22,7 @@ try:
     for picname in picnames:
         button = pygame.sprite.Sprite()
         button.name = picname
-        button.image = pygame.image.load("pic/{}.PNG".format(picname)).convert_alpha()
+        button.image = pygame.image.load("stuff/pic/{}.PNG".format(picname)).convert_alpha()
         button.rect = button.image.get_rect()
         button.rect.center = (x/2, place)
         place += 20

@@ -1,8 +1,9 @@
 from random import randint
 from time import sleep, time
 import queue
-import values
 import sys
+
+from stuff import values
 
 try:
     import pygame
@@ -80,7 +81,7 @@ class Sprite():
         self.mapa = mapa
         self.priority = "eat"
         if ver == "graphic":
-            self.img = pygame.image.load("pic/{}".format(image)).convert_alpha()
+            self.img = pygame.image.load("stuff/pic/{}".format(image)).convert_alpha()
             self.rect = self.img.get_rect()
     def move(self):
         pass            
@@ -236,12 +237,13 @@ class Dog(Sprite):
                     #    for obj in self.mapa.objs:
                     #        if obj.x, obj.y == pos[0], pos[1]:
                     #            Don't continue
-                    if True: #if do continue
-                        self.closest(gofor)# from here
-                        goto = self.runto()
-                        if goto == None:
-                            self.mapa.addc(Corpse(self.target.y, self.target.x, self.mapa, self.target.food))
-                            self.mapa.objs.remove(self.target)
+                    
+                    #if do continue
+                    self.closest(gofor)# from here
+                    goto = self.runto()
+                    if goto == None:
+                        self.mapa.addc(Corpse(self.target.y, self.target.x, self.mapa, self.target.food))
+                        self.mapa.objs.remove(self.target)
         else:
             beh = randint(0, 175)
             goto = self.runrand(beh)

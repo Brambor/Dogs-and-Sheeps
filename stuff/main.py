@@ -118,12 +118,16 @@ class Sprite():
     def hunger(self):
         if self.znak == "S":
             self.hungry -= values.Sheep_hungry
+        elif self.znak == "s":
+            self.hungry -= values.Sheep_baby_hungry
         elif self.znak == "D":
             self.hungry -= values.Dog_hungry
         if self.hungry <= 0:
             self.mapa.addc(Corpse(self.y, self.x, self.mapa, self.food))
             self.mapa.objs.remove(self)
         elif self.znak == "S" and self.hungry < values.Sheep_I_am_hungry:
+            self.priority = "eat"
+        elif self.znak == "s" and self.hungry < values.Sheep_baby_I_am_hungry:
             self.priority = "eat"
         elif self.znak == "D" and self.hungry < values.Dog_I_am_hungry:
             self.priority = "eat"
@@ -138,6 +142,8 @@ class Sprite():
                 self.hungry += toeat
                 if self.znak == "S" and self.hungry >= values.Sheep_stomach:
                     self.priority = "augment"
+                if self.znak == "s" and self.hungry >= values.Sheep_baby_stomach:
+                    self.priority = "evolve"
                 elif self.znak == "D" and self.hungry >= values.Dog_stomach:
                     self.priority = "augment"
                 return
@@ -200,15 +206,26 @@ class Sprite():
         if place == self.mapa.znaky[self.destin - 1]:
             self.pole[y][x] = "X"
             self.destin, self.destx, self.desty = self.destin - 1, x, y
-    def augment(self, znak, close = False):
+    def augment(self, znak, close = False): # Just for Sheep so far
         for obj in self.opposites:
             if abs(self.x - obj.x) + abs(self.y - obj.y) == 1:
                 if close:
                     return True
                 self.hungry, obj.hungry = self.hungry - values.Sheep_rp_food_consume, obj.hungry - values.Sheep_rp_food_consume
                 self.priority, obj.priority = ["eat"]*2
-                self.mapa.add(Sheep(self.y, self.x, self.mapa.ID, self.mapa))
+                self.mapa.add(Sheep_baby(self.y, self.x, self.mapa.ID, self.mapa))
                 return
+    def evolve(self):
+        if self.znak == "s":
+            if self.evolution == values.Sheep_baby_evolution:
+                self.mapa.objs.remove(self)
+                self.mapa.add(Sheep(self.y, self.x, self.mapa.ID, self.mapa))
+            elif randint(1, values.Sheep_baby_evolution_chance) == values.Sheep_baby_evolution_chance:
+                self.evolution += 1
+                for i in range(values.Sheep_baby_evolution_cost):
+                    self.hunger()
+                print(self.ID, self.evolution)
+
 
 class Dog(Sprite):
     def __init__(self, y, x, ID, mapa):
@@ -224,7 +241,7 @@ class Dog(Sprite):
             if self.eat("C", 0):
                 self.eat("C", self.eatthat)
             else:
-                sheeps = list(filter(lambda obj: obj.znak == "S", self.mapa.objs))
+                sheeps = list(filter(lambda obj: obj.znak == "S", self.mapa.objs)) + list(filter(lambda obj: obj.znak == "s", self.mapa.objs)) #I'm lazy, I will do that later
                 corpses = self.mapa.corpses
                 if len(corpses) + len(sheeps) == 0:
                     beh = randint(0, 150)
@@ -282,6 +299,37 @@ class Sheep(Sprite):
             goto = self.runrand(beh)
         return goto
 
+class Sheep_baby(Sprite):
+    def __init__(self, y, x, ID, mapa):
+        super().__init__("s", y, x, mapa, "sheep_baby.png")
+        self.ID = ID
+        self.food = values.Sheep_baby_corpse_food
+        self.hungry = values.Sheep_baby_start_food
+        self.eatthat = values.Sheep_baby_eat
+        self.run = 200
+        self.evolution = 0
+    def move(self):
+        self.hunger()
+        goto = None
+        if self.priority == "eat":
+            if self.eat(".", 0):
+                self.eat(".", self.eatthat)
+                goto = True
+            else:
+                gofor = self.mapa.grass#
+                if len(gofor) != 0:
+                    goto = self.search(["."], [" "])#
+        elif self.priority == "evolve":
+            self.evolve()
+            beh = randint(0, 125) ##
+            goto = self.runrand(beh)
+        if goto == True:
+            goto = None
+        elif goto == None:
+            beh = randint(0, self.run)
+            goto = self.runrand(beh)
+        return goto
+
 class Corpse(Sprite):
     def __init__(self, y, x, mapa, food):
         super().__init__("C", y, x, mapa, "corpse.png")
@@ -321,6 +369,9 @@ class Run():
             
         for i in range(values.Sheep):
             mapa.add(Sheep(randint(1, mapa.x-2), randint(1, mapa.y -2), mapa.ID, mapa))
+
+        for i in range(values.Sheep_baby):
+            mapa.add(Sheep_baby(randint(1, mapa.x-2), randint(1, mapa.y -2), mapa.ID, mapa))
             
         for i in range(values.Grass):
             mapa.addg(Grass(randint(1, mapa.x-2), randint(1, mapa.y -2), mapa))

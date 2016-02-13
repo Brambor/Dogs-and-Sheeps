@@ -1,7 +1,6 @@
 import sys
 
-from stuff import main
-from stuff import values
+from stuff import main, values
 
 ver = "graphic"
 picnames = ["Play","Quit"]

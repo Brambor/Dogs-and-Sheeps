@@ -224,7 +224,6 @@ class Sprite():
                 self.evolution += 1
                 for i in range(values.Sheep_baby_evolution_cost):
                     self.hunger()
-                print(self.ID, self.evolution)
 
 
 class Dog(Sprite):
@@ -241,7 +240,7 @@ class Dog(Sprite):
             if self.eat("C", 0):
                 self.eat("C", self.eatthat)
             else:
-                sheeps = list(filter(lambda obj: obj.znak == "S", self.mapa.objs)) + list(filter(lambda obj: obj.znak == "s", self.mapa.objs)) #I'm lazy, I will do that later
+                sheeps = list(filter(lambda obj: obj.znak == "S" or obj.znak == "s", self.mapa.objs))
                 corpses = self.mapa.corpses
                 if len(corpses) + len(sheeps) == 0:
                     beh = randint(0, 150)

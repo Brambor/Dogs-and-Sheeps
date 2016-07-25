@@ -11,11 +11,11 @@ except ImportError:
     pass
 
 class Map():
-    def __init__(self, y, x):
-        self.x, self.y = x, y
+    def __init__(self, height, width): #y, x is right
+        self.x, self.y = width, height
         if ver == "graphic":
            pygame.init()
-           self.screen = pygame.display.set_mode((y * 12, x * 8))
+           self.screen = pygame.display.set_mode((self.x * 12, self.y * 8))
            pygame.display.init() # is it needed?
            self.bg_color=(0,0,0)
         self.objs, self.corpses, self.grass, self.stone, self.ID = [], [], [], [], 0
@@ -36,32 +36,32 @@ class Map():
         x, y = self.x, self.y
 
         pole = []
-        for i in range(x):
+        for row in range(y):
             pole.append([])
-            pole[i].extend([" "]*y)
+            pole[row].extend([" "]*x)
             
         if ver == "graphic":
            self.screen.fill(self.bg_color)
         
            for obj in self.grass:
-               obj.rect.topleft = (obj.x*12, obj.y*8)
+               obj.rect.topleft = (obj.y*12, obj.x*8)
                self.screen.blit(obj.img, obj.rect)
             
            for obj in self.objs + self.stone + self.corpses: #str(obj.ID)
-               obj.rect.topleft = (obj.x*12, obj.y*8)
+               obj.rect.topleft = (obj.y*12, obj.x*8)
                self.screen.blit(obj.img, obj.rect)
 
            pygame.display.update()
            
         elif ver == "text":
            for obj in self.grass:
-               pole[obj.y][obj.x] = obj.znak
+               pole[obj.x][obj.y] = obj.znak
             
            for obj in self.stone + self.corpses + self.objs:
-               pole[obj.y][obj.x] = obj.znak # if objs: str(obj ID)
+               pole[obj.x][obj.y] = obj.znak # if objs: str(obj ID)
             
-           for i in range(x):
-               pole[i] = "".join(pole[i])
+           for row in range(y):
+               pole[row] = "".join(pole[row])
            pole = "\n".join(pole)
            print()
            print(pole, end = "")
@@ -125,11 +125,7 @@ class Sprite():
         if self.hungry <= 0:
             self.mapa.addc(Corpse(self.y, self.x, self.mapa, self.food))
             self.mapa.objs.remove(self)
-        elif self.znak == "S" and self.hungry < values.Sheep_I_am_hungry:
-            self.priority = "eat"
-        elif self.znak == "s" and self.hungry < values.Sheep_baby_I_am_hungry:
-            self.priority = "eat"
-        elif self.znak == "D" and self.hungry < values.Dog_I_am_hungry:
+        elif (self.znak == "S" and self.hungry < values.Sheep_I_am_hungry) or (self.znak == "s" and self.hungry < values.Sheep_baby_I_am_hungry) or (self.znak == "D" and self.hungry < values.Dog_I_am_hungry):
             self.priority = "eat"
     def eat(self, eatit, toeat):
         for obj in self.mapa.corpses + self.mapa.grass:
@@ -148,11 +144,10 @@ class Sprite():
                     self.priority = "augment"
                 return
     def validate(self, goto):
-        gut = True #
         for obj in self.mapa.objs + self.mapa.corpses + self.mapa.stone:
             if goto[0] == obj.x and goto[1] == obj.y:
-                gut = False #return False
-        return gut #return True
+                return False
+        return True
     def update(self):
         newpos = self.move()
         if newpos == None:
@@ -160,12 +155,11 @@ class Sprite():
         elif self.validate(newpos) == True:
             self.x, self.y = newpos
     def search(self, dest, passit):
-        self.q, self.done, self.znaky, self.index = queue.Queue(), False, ["A"], 0
-        self.pole = []
+        self.q, self.done, self.znaky, self.index, self.pole = queue.Queue(), False, ["A"], 0, []
         self.q.put((0, self.y, self.x))
         for i in range(self.mapa.y):
-            self.pole.append([]) #merge these two lines
-            self.pole[i].extend([" "]*self.mapa.x) #is it slow?
+            self.pole.append([]) #is it slow?
+            self.pole[i].extend([" "]*self.mapa.x)
         for obj in self.mapa.grass:
             self.pole[obj.x][obj.y] = obj.znak
         for obj in self.mapa.stone + self.mapa.corpses:
@@ -180,25 +174,24 @@ class Sprite():
         while not self.done:
             if not self.q.empty():
                 me, x, y = self.q.get()
-                for pos in [[x, y - 1], [x + 1, y], [x, y + 1], [x - 1, y]]: # tuple?
+                for pos in ((x, y - 1), (x + 1, y), (x, y + 1), (x - 1, y)):
                     self.searchit(pos[0], pos[1], me + 1, dest, passit)
-                    #if self.done:break
+                    if self.done:
+                        break
             else:
                 return False
         return True
     def searchit(self, x, y, next, dest, passit):
         place = self.pole[y][x]
-        #self.done = False
         if place in passit: # next to => passit = []
             self.pole[y][x] = self.mapa.znaky[next]
             self.q.put((next, x, y))
         elif place in dest:
             self.done = True
             self.destin, self.destx, self.desty = next, x, y
-        #if passit == []: return self.done
     def searchback(self):
         for i in range(self.destin - 1):
-            for e in [[self.destx, self.desty - 1], [self.destx + 1, self.desty], [self.destx, self.desty + 1], [self.destx - 1, self.desty]]:
+            for e in ((self.destx, self.desty - 1), (self.destx + 1, self.desty), (self.destx, self.desty + 1), (self.destx - 1, self.desty)):
                 self.findback(e[0], e[1])
         return self.desty, self.destx
     def findback(self, x, y):
@@ -249,12 +242,6 @@ class Dog(Sprite):
                     gofor = corpses #C
                     if len(corpses) == 0:
                         gofor = sheeps #S
-                    #for pos in [[self.x, self.y - 1], [self.x + 1, self.y], [self.x, self.y + 1], [self.x - 1, self.y]]:
-                    #    for obj in self.mapa.objs:
-                    #        if obj.x, obj.y == pos[0], pos[1]:
-                    #            Don't continue
-                    
-                    #if do continue
                     self.closest(gofor)# from here
                     goto = self.runto()
                     if goto == None:
@@ -361,7 +348,7 @@ class Run():
         global ver
         ver = version
 
-        mapa = Map(values.map_x, values.map_y)
+        mapa = Map(values.map_height, values.map_width)
 
         for i in range(values.Dogs):
             mapa.add(Dog(randint(1, mapa.x-2), randint(1, mapa.y -2), mapa.ID, mapa))
@@ -404,7 +391,7 @@ class Run():
                         #sleep(2)
                         sys.exit()
             elif ver == "text":
-                waitfor = 0.1 + time() - wait
+                waitfor = 1/values.FPS + time() - wait
                 if waitfor > 0:
                     sleep(waitfor)
         #    print(time.time() - a)

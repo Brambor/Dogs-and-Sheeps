@@ -1,6 +1,6 @@
-map_x = 60 #Map width; any natural number higher than 2; default = 60
-map_y = 25 #Map height; any natural number higher than 2; default = 25
 FPS = 10 #Frames per second AND turns per second; any natural number higher than 0; default = 10
+map_width = 60 #Map width; any natural number higher than 2; default = 60
+map_height = 25 #Map height; any natural number higher than 2; default = 25
 
 Dogs = 2 #Starting numer of Dogs; any natural number; default = 2
 Dog_start_food = 100 #Food that Dogs have in stomach at start; any natural number higher than 0 (because 0 means it will die immediatelly); default = 100

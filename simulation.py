@@ -7,7 +7,7 @@ picnames = ["Play","Quit"]
 try:
     import pygame
 
-    x, y = values.map_x*12, values.map_y*8
+    x, y = values.map_width*12, values.map_height*8
     pygame.init()
     screen = pygame.display.set_mode((x, y))
     pygame.display.set_caption("Dogs & Sheeps")

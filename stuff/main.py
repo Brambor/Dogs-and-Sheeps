@@ -154,6 +154,10 @@ class Sprite():
             pass
         elif self.validate(newpos) == True:
             self.x, self.y = newpos
+
+    #The begining of searching
+    #TODO"search":
+    #Change it so that it searches intelligently towards the nearest object and check if some other could be theoretically closer, but CHOOSE the closest object
     def search(self, dest, passit):
         self.q, self.done, self.znaky, self.index, self.pole = queue.Queue(), False, ["A"], 0, []
         self.q.put((0, self.y, self.x))
@@ -188,17 +192,58 @@ class Sprite():
             self.q.put((next, x, y))
         elif place in dest:
             self.done = True
-            self.destin, self.destx, self.desty = next, x, y
+            self.destin, self.destx, self.desty = next, x, y #TODO"path": check x, y for objects and save targeted object as self.path_target
+            #TODO
+            #for obj in grass+corpses+objects: # if self.target mark == ".": grass; if self.target mark =="s", or "S" or "C": corpses + objects
+                #if x,y are right and obj.mark_on_map in dest:
+                    #self.path_target = obj
     def searchback(self):
+        #self.path_boolean = True
         for i in range(self.destin - 1):
             for e in ((self.destx, self.desty - 1), (self.destx + 1, self.desty), (self.destx, self.desty + 1), (self.destx - 1, self.desty)):
                 self.findback(e[0], e[1])
+        #for PP
+
+        #x, y = self.mapa.x, self.mapa.y
+        #for row in range(y):
+        #    for point in range(x):
+        #        if len(self.pole[row][point]) > 1:
+        #            self.pole[row][point] = self.pole[row][point][0]
+        #self.pole_print = []
+        #for row in self.pole:
+        #    self.pole_print.append("".join(row))
+        ##print("\n".join(self.pole_print))
+
+        #end for PP
         return self.desty, self.destx
     def findback(self, x, y):
         place = self.pole[y][x]
         if place == self.mapa.znaky[self.destin - 1]:
+            #TODO"path": MAYBE let run the last layer (7th for example) and save ALL possible patches, then sheep will run the ones that have most same tiles and cut off if any is not validated
+            #BUT it may be slower than search from begining for new path if current is interupted
             self.pole[y][x] = "X"
+            #self.path_list.append((x, y))
             self.destin, self.destx, self.desty = self.destin - 1, x, y
+    #End of searching
+    #BETTER searching
+    #def b_search(self):
+    #    self.q, self.pole = queue.Queue(), []
+    #    self.q.put((0, self.x, self.y))
+        #for i in range(self.mapa.y):
+        #    self.pole.append([]) #is it slow?
+        #    self.pole[i].extend([" "]*self.mapa.x)
+        #for obj in self.mapa.grass:
+        #    self.pole[obj.x][obj.y] = obj.znak
+        #for obj in self.mapa.stone + self.mapa.corpses:
+        #    self.pole[obj.x][obj.y] = obj.znak
+        #for obj in self.mapa.objs:
+        #    self.pole[obj.x][obj.y] = obj.znak + str(obj.ID) #slow?
+        #self.pole[self.x][self.y] = "$" #is $ needed?
+        #if self.searchthere(dest, passit):
+        #    return self.searchback()
+        #return None
+    #end of BETTER searching
+
     def augment(self, znak, close = False): # Just for Sheep so far
         for obj in self.opposites:
             if abs(self.x - obj.x) + abs(self.y - obj.y) == 1:
@@ -240,7 +285,7 @@ class Dog(Sprite):
                     goto = self.runrand(beh)
                 else:
                     gofor = corpses #C
-                    if len(corpses) == 0:
+                    if len(corpses) == 0: #TODO: and if corpses are too far relative to sheep
                         gofor = sheeps #S
                     self.closest(gofor)# from here
                     goto = self.runto()
@@ -260,6 +305,9 @@ class Sheep(Sprite):
         self.hungry = values.Sheep_start_food
         self.eatthat = values.Sheep_eat
         self.run = 200
+        #self.path_boolean = False #just self.path_target == None?
+        #self.path_target = None
+        #self.path_list = []
     def move(self):
         self.hunger()
         goto = None
@@ -268,15 +316,29 @@ class Sheep(Sprite):
                 self.eat(".", self.eatthat)
                 goto = True
             else:
+                #if self.path_boolean:
                 gofor = self.mapa.grass#
                 if len(gofor) != 0:
-                    goto = self.search(["."], [" "])#
+                    #TODO"path":
+                    #validate that the self.path_target exist
+                    #validate() each of path steps
+                    #check for closer <grass> than len(self.path_list)
+                    #!!!no list of banned <grass> (because of moving objects)
+                    #go by self.path[-1]
+                #if not self.path_boolean:
+                    goto = self.search(["."], [" "]) #TODO"path": replace that
         elif self.priority == "augment":
             self.opposites = list(filter(lambda obj: obj.znak == "S" and obj.priority == "augment" and self.ID != obj.ID, self.mapa.objs))
             if len(self.opposites) > 0:
                 if self.augment("S", True):
                     self.augment("S")
                 else:
+                    #TODO"path":
+                    #new path finding will work with different rules
+                    #they will find a path, check if there is theoretical shorter path, then one of them will remember it, the second one will use it as well,
+                    #one from one side of the list, the other from the other
+                    #that means that there will be "love" and they might start to augment later if they find a partner AND they will already know how much the path will take them,
+                    #if one don't want to risk low food supply, then the "love" is canceled and the second one might find another partner if he has enough food
                     goto = self.search([opp.znak + str(opp.ID) for opp in self.opposites], [" ", "."]) #format
         if goto == True:
             goto = None
@@ -294,6 +356,9 @@ class Sheep_baby(Sprite):
         self.eatthat = values.Sheep_baby_eat
         self.run = 200
         self.evolution = 0
+        #self.path_boolean = False #just self.path_target == None?
+        #self.path_target = None
+        #self.path_list = []
     def move(self):
         self.hunger()
         goto = None
@@ -374,7 +439,17 @@ class Run():
         mapa.draw()
         sleep(1.5)
         go = True
+        #for PP
+        #i = 0
+        #end for PP
         while go:
+            #TODO"stats":hower over (write "Sheep n.8") to show stats(food, path, priority... everything)
+            #for PP
+            #i += 1
+            #if i % 100 == 0:
+            #    print(i)
+            #    go = False
+            #end for PP
         #    a = time()
             if ver == "graphic":
                 pygame.time.Clock().tick(values.FPS)

@@ -283,12 +283,12 @@ class Sprite():
 
 
 class Dog(Sprite):
+	food = values.Dog_corpse_food
+	eatthat = values.Dog_eat
 	def __init__(self, y, x, ID, mapa):
 		super().__init__("D", y, x, mapa, "dog.png")
 		self.ID = ID
-		self.food = values.Dog_corpse_food
 		self.hungry = values.Dog_start_food
-		self.eatthat = values.Dog_eat
 	def move(self):
 		self.hunger()
 		goto = None
@@ -316,12 +316,12 @@ class Dog(Sprite):
 		return goto
 
 class Sheep(Sprite):
+	food = values.Sheep_corpse_food
+	eatthat = values.Sheep_eat
 	def __init__(self, y, x, ID, mapa):
 		super().__init__("S", y, x, mapa, "sheep.png")
 		self.ID = ID
-		self.food = values.Sheep_corpse_food
 		self.hungry = values.Sheep_start_food
-		self.eatthat = values.Sheep_eat
 		self.run = 200
 		#self.path_boolean = False #just self.path_target == None?
 		#self.path_target = None
@@ -366,12 +366,12 @@ class Sheep(Sprite):
 		return goto
 
 class Sheep_baby(Sprite):
+	food = values.Sheep_baby_corpse_food
+	eatthat = values.Sheep_baby_eat
 	def __init__(self, y, x, ID, mapa):
 		super().__init__("s", y, x, mapa, "sheep_baby.png")
 		self.ID = ID
-		self.food = values.Sheep_baby_corpse_food
 		self.hungry = values.Sheep_baby_start_food
-		self.eatthat = values.Sheep_baby_eat
 		self.run = 200
 		self.evolution = 0
 		#self.path_boolean = False #just self.path_target == None?

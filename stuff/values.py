@@ -1,4 +1,4 @@
-FPS = 10 #Frames per second AND turns per second; any natural number higher than 0; default = 10
+FPS = 30 #Frames per second AND turns per second; any natural number higher than 0; default = 10
 map_width = 60 #Map width; any natural number higher than 2; default = 60
 map_height = 25 #Map height; any natural number higher than 2; default = 25
 

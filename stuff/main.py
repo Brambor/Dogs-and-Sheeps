@@ -250,6 +250,7 @@ class Sprite():
 		if target_closest == None:
 			return None
 		#search
+		#Take the places that are closest (dist) to target and put the +1 all around them, then mark them as used. In next cycle the closest only will be choosen to do it`s thing. If no new places are created and the target is still not found then use the ones not marked as used.
 		walked = 0
 		while True:
 			me, x, y = q.get()

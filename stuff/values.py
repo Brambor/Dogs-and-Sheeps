@@ -1,4 +1,4 @@
-FPS = 30 #Frames per second AND turns per second; any natural number higher than 0; default = 10
+FPS = 30 #Frames per second AND turns per second; any natural number; 0 means as much as possible; default = 30
 map_width = 60 #Map width; any natural number higher than 2; default = 60
 map_height = 25 #Map height; any natural number higher than 2; default = 25
 
@@ -10,7 +10,7 @@ Dog_I_am_hungry = 250 #Limit on wich they don't try to reproduce but eat; any na
 Dog_hungry = 2 #How much food will it use per one turn; any natural number (even 0); default = 2
 Dog_corpse_food = 20 #How much food will be in corpse from Dog; any natural number; default = 20
 
-Sheep = 7 #Starting numer of Sheep; any natural number; default = 6 OR 7 => too less OR too many, will be improved in future versions
+Sheep = 12 #Starting numer of Sheep; any natural number; default = 12
 Sheep_start_food = 50 #Food that Sheep have in stomach at start; any natural number higher than 0 (because 0 means it will die immediatelly); default = 50
 Sheep_eat = 5 #How much can Sheep eat per one turn; any natural number higher than 0; default = 5
 Sheep_stomach = 350 #Maximum food it can have in stomach - at maximum they will try to reproduce; any natural number higher than 0; default = 350
@@ -30,8 +30,8 @@ Sheep_baby_evolution = 25 #How many evolution points does evolution of Sheep_bab
 Sheep_baby_evolution_chance = 3 #What is the chance of getting an evolution point (1/Sheep_baby_evolution_chance); any natural number; default = 3
 Sheep_baby_evolution_cost = 3 #How much of hunger*Sheep_baby_hungry will it use per one evolution token; any natural number; default = 3
 
-Grass = 100 #Starting numer of Grass; any natural number; default = 100
-Grass_spawn_rate = 7 #Grass is spawned in random intervals between [1 and Grass_spawn_rate] turns, so smaller interval means more grass spawned over time; any natural number higher than 0; default = 7
-Grass_food = 5 #Food Grass have on spawn; any natural number higher than 0 (because 0 means it will erase immediatelly); default = 5
+Grass = 200 #Starting numer of Grass; any natural number; default = 200
+Grass_spawn_rate = 1 #Grass is spawned in random intervals between [1 and Grass_spawn_rate] turns, so smaller interval means more grass spawned over time; any natural number higher than 0; default = 1
+Grass_food = 7 #Food Grass have on spawn; any natural number higher than 0 (because 0 means it will erase immediatelly); default = 7
 Grass_grow = 1 #Amount by which is increased food supply each turn in each Grass; any whole number (grass may dying); default = 1
 Grass_max = 50 #Maximal amount of food that can be in one Grass thingie; any natural number higher than 0; default = 50

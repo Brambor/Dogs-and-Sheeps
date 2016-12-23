@@ -19,6 +19,7 @@ class Map():
 			pygame.display.init() # is it needed?
 			self.bg_color=(0,0,0)
 		self.objs, self.corpses, self.grass, self.stone, self.ID = [], [], [], [], 0
+		self.colouring = []
 		self.wait = randint(1, values.Grass_spawn_rate)
 		self.znaky = ["$"]
 		for i in range(self.x*self.y):
@@ -36,10 +37,14 @@ class Map():
 		x, y = self.x, self.y
 
 		pole = [[" "]*x for i in range(y)]
-			
+
 		if ver == "graphic":
 			self.screen.fill(self.bg_color)
-		
+
+			while len(self.colouring) > 0:
+				c = self.colouring.pop()
+				self.screen.fill(c[0], (c[1][0]*12, c[1][1]*8, 12, 8))
+
 			for obj in self.grass:
 				obj.rect.topleft = (obj.y*12, obj.x*8)
 				self.screen.blit(obj.img, obj.rect)
@@ -70,6 +75,12 @@ class Map():
 		if self.wait == 0:
 			self.wait = randint(1, values.Grass_spawn_rate)
 			self.addg(Grass(randint(1, self.x - 2), randint(1, self.y - 2), self)) # idea: grass not spawning on ocuped tiles .gramar.
+	def get_objs_by_position(self, pos):
+		to_return = []
+		for obj in self.objs:
+			if obj.x == pos[0] and obj.y == pos[1]:
+				to_return.append(obj)
+		return to_return
 		
 class Sprite():
 	def __init__(self, znak, y, x, mapa, image):
@@ -164,8 +175,9 @@ class Sprite():
 		for obj in self.mapa.stone + self.mapa.corpses:
 			self.pole[obj.x][obj.y] = obj.znak
 		for obj in self.mapa.objs:
-			self.pole[obj.x][obj.y] = "{}{}".format(obj.znak, str(obj.ID))
+			self.pole[obj.x][obj.y] = "{}{}".format(obj.znak, str(obj.ID)) # TODO: instead look what is at the tile they found (and choose from these objs)
 		self.pole[self.x][self.y] = "$" #is $ needed?
+		self.path = []
 		if self.searchthere(dest, passit):
 			return self.searchback()
 		return None
@@ -186,6 +198,7 @@ class Sprite():
 			self.pole[y][x] = self.mapa.znaky[next]
 			self.q.put((next, x, y))
 		elif place in dest:
+			self.path.append((x, y))
 			self.done = True
 			self.destin, self.destx, self.desty = next, x, y #TODO"path": check x, y for objects and save targeted object as self.path_target
 			#TODO
@@ -217,7 +230,7 @@ class Sprite():
 			#TODO"path": MAYBE let run the last layer (7th for example) and save ALL possible patches, then sheep will run the ones that have most same tiles and cut off if any is not validated
 			#BUT it may be slower than search from begining for new path if current is interupted
 			self.pole[y][x] = "X"
-			#self.path_list.append((x, y))
+			self.path.append((x, y))
 			self.destin, self.destx, self.desty = self.destin - 1, x, y
 	#End of searching
 	#BETTER searching
@@ -326,7 +339,7 @@ class Sheep(Sprite):
 		self.hungry = values.Sheep_start_food
 		#self.path_boolean = False #just self.path_target == None?
 		#self.path_target = None
-		#self.path_list = []
+		self.path = []
 	def move(self):
 		self.hunger()
 		goto = None
@@ -377,7 +390,7 @@ class Sheep_baby(Sprite):
 		self.evolution = 0
 		#self.path_boolean = False #just self.path_target == None?
 		#self.path_target = None
-		#self.path_list = []
+		self.path = []
 	def move(self):
 		self.hunger()
 		goto = None
@@ -458,6 +471,8 @@ class Run():
 		mapa.draw()
 		sleep(1.5)
 		go = True
+		wait = time()
+		paused = False
 		#for PP
 		#i = 0
 		#end for PP
@@ -474,18 +489,41 @@ class Run():
 				pygame.time.Clock().tick(values.FPS)
 			elif ver == "text":
 				wait = time()
-			mapa.update()
-			mapa.draw() # add FPS and dropped FPS
+			if not paused or one_more_frame:
+				mapa.update()
+			mapa.draw() # add FPS
 			if ver == "graphic":
+				one_more_frame = False
+				pos = pygame.mouse.get_pos()
+				pos = (int(pos[0]/12), int(pos[1]/8))
+				objs = mapa.get_objs_by_position((pos[1], pos[0]))
+				for obj in objs:
+					if obj.znak == "S":
+						#print(obj.path)
+						for c in obj.path[1:-1]:
+							mapa.colouring.append(((255, 204, 0), (c[0], c[1]))) #orange
+						mapa.colouring.append(((215, 0, 0), (obj.path[0][0], obj.path[0][1]))) #red
+
 				for event in pygame.event.get():
 					if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
 						go = False
+					elif event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+						if paused:
+							paused = False
+						else:
+							paused = True
+					elif event.type == pygame.KEYDOWN and event.key == pygame.K_f:
+						one_more_frame = True
 					elif event.type == pygame.QUIT:
 						#print("Thanks for using!")
 						#sleep(2)
 						sys.exit()
-			elif ver == "text":
+
+			elif ver == "text" and values.FPS > 0:
+				wait = time()
 				waitfor = 1/values.FPS + time() - wait
 				if waitfor > 0:
 					sleep(waitfor)
 		#	print(time.time() - a)
+		#if go == False:
+		#	save and such

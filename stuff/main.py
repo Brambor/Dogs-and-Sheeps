@@ -18,8 +18,12 @@ class Map():
 			self.screen = pygame.display.set_mode((self.x * 12, self.y * 8))
 			pygame.display.init() # is it needed?
 			self.bg_color=(0,0,0)
+
+			self.track = {}
+			for t in ["01", "02", "03", "12", "13", "23", "target"]:
+				self.track[t] = pygame.image.load("stuff/pic/track_{}.png".format(t)).convert_alpha()
 		self.objs, self.corpses, self.grass, self.stone, self.ID = [], [], [], [], 0
-		self.colouring = []
+		self.colouring = None
 		self.wait = randint(1, values.Grass_spawn_rate)
 		self.znaky = ["$"]
 		for i in range(self.x*self.y):
@@ -41,9 +45,9 @@ class Map():
 		if ver == "graphic":
 			self.screen.fill(self.bg_color)
 
-			while len(self.colouring) > 0:
-				c = self.colouring.pop()
-				self.screen.fill(c[0], (c[1][0]*12, c[1][1]*8, 12, 8))
+			if self.colouring != None:
+				self.draw_path(self.colouring)
+				self.colouring = None
 
 			for obj in self.grass:
 				obj.rect.topleft = (obj.y*12, obj.x*8)
@@ -81,12 +85,34 @@ class Map():
 			if obj.x == pos[0] and obj.y == pos[1]:
 				to_return.append(obj)
 		return to_return
-		
+	def draw_path(self, path):
+		if len(path) == 0:
+			return None
+		self.screen.blit(self.track["target"], (path[0][0]*12, path[0][1]*8))
+		for p in range(len(path) - 2):
+			to_directions = (path[p][0] - path[p+1][0], path[p][1] - path[p+1][1])
+			from_directions = (path[p+1][0] - path[p+2][0], path[p+1][1] - path[p+2][1])
+			#0: (0, -1) 1: (1, 0) 2: (0, 1) 3: (-1, 0)
+			if ((from_directions, to_directions) == ((0, 1), (1, 0))) or ((from_directions, to_directions) == ((-1, 0), (0, -1))):
+				track = self.track["01"] #01
+			elif ((from_directions, to_directions) == ((0, 1), (0, 1))) or ((from_directions, to_directions) == ((0, -1), (0, -1))):
+				track = self.track["02"] #02
+			elif ((from_directions, to_directions) == ((0, 1), (-1, 0))) or ((from_directions, to_directions) == ((1, 0), (0, -1))):
+				track = self.track["03"] #03
+			elif ((from_directions, to_directions) == ((-1, 0), (0, 1))) or ((from_directions, to_directions) == ((0, -1), (1, 0))):
+				track = self.track["12"] #12
+			elif ((from_directions, to_directions) == ((1, 0), (1, 0))) or ((from_directions, to_directions) == ((-1, 0), (-1, 0))):
+				track = self.track["13"] #13
+			elif ((from_directions, to_directions) == ((0, -1), (-1, 0))) or ((from_directions, to_directions) == ((1, 0), (0, 1))):
+				track = self.track["23"] #23
+			self.screen.blit(track, (path[p+1][0]*12, path[p+1][1]*8))
+
 class Sprite():
 	def __init__(self, znak, y, x, mapa, image):
 		self.y, self.x = y, x
 		self.znak = znak
 		self.mapa = mapa
+		self.path = []
 		self.priority = "eat"
 		if ver == "graphic":
 			self.img = pygame.image.load("stuff/pic/{}".format(image)).convert_alpha()
@@ -339,7 +365,6 @@ class Sheep(Sprite):
 		self.hungry = values.Sheep_start_food
 		#self.path_boolean = False #just self.path_target == None?
 		#self.path_target = None
-		self.path = []
 	def move(self):
 		self.hunger()
 		goto = None
@@ -390,7 +415,6 @@ class Sheep_baby(Sprite):
 		self.evolution = 0
 		#self.path_boolean = False #just self.path_target == None?
 		#self.path_target = None
-		self.path = []
 	def move(self):
 		self.hunger()
 		goto = None
@@ -485,9 +509,9 @@ class Run():
 			#	go = False
 			#end for PP
 		#	a = time()
-			if ver == "graphic":
+			if ver == "graphic" and values.FPS > 0:
 				pygame.time.Clock().tick(values.FPS)
-			elif ver == "text":
+			elif ver == "text" and values.FPS > 0:
 				wait = time()
 			if not paused or one_more_frame:
 				mapa.update()
@@ -498,11 +522,8 @@ class Run():
 				pos = (int(pos[0]/12), int(pos[1]/8))
 				objs = mapa.get_objs_by_position((pos[1], pos[0]))
 				for obj in objs:
-					if obj.znak == "S":
-						#print(obj.path)
-						for c in obj.path[1:-1]:
-							mapa.colouring.append(((255, 204, 0), (c[0], c[1]))) #orange
-						mapa.colouring.append(((215, 0, 0), (obj.path[0][0], obj.path[0][1]))) #red
+					if obj.znak == "S" or "s": #or "D"
+						mapa.colouring = obj.path
 
 				for event in pygame.event.get():
 					if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:

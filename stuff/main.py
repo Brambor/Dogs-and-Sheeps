@@ -1,3 +1,4 @@
+import heapq
 from random import randint
 from time import sleep, time
 import queue
@@ -78,16 +79,36 @@ class Map():
 		self.wait -= 1
 		if self.wait == 0:
 			self.wait = randint(1, values.Grass_spawn_rate)
-			self.addg(Grass(randint(1, self.x - 2), randint(1, self.y - 2), self)) # idea: grass not spawning on ocuped tiles .gramar.
+			self.addg(Grass(randint(1, self.x - 2), randint(1, self.y - 2), self)) # idea: grass should not be spawning on occupied tiles
 	def get_objs_by_position(self, pos):
-		to_return = []
+		to_return = set()
 		for obj in self.objs:
 			if obj.x == pos[0] and obj.y == pos[1]:
-				to_return.append(obj)
+				to_return.add(obj)
+		return to_return
+	def get_grass_by_position(self, pos):
+		for g in self.grass:
+			if g.x == pos[0] and g.y == pos[1]:
+				return g
+		return False
+	def get_impassable_objects(self):
+		return self.objs + self.corpses + self.stone
+	def get_all_sheep_pathes(self):
+		to_return = set()
+		for obj in self.objs:
+			if obj.znak == "S" or obj.znak == "s":
+				if obj.path_exists:
+					for p in obj.path:
+						to_return.add(p)
 		return to_return
 	def draw_path(self, path):
 		if len(path) == 0:
 			return None
+		owerturned_path = []
+		for p in path:
+			owerturned_path.append((p[1], p[0]))
+		path = owerturned_path
+
 		self.screen.blit(self.track["target"], (path[0][0]*12, path[0][1]*8))
 		for p in range(len(path) - 2):
 			to_directions = (path[p][0] - path[p+1][0], path[p][1] - path[p+1][1])
@@ -126,6 +147,10 @@ class Sprite():
 			if nfar < far:
 				far = nfar
 				self.target = ents[i]
+	def get_distance_from(self, thing, target):
+		return abs(thing[0] - target.x) + abs(thing[1] - target.y)
+	def get_shortest_distance_from(self, thing, targets):
+		return min(set(abs(thing[0] - target[0]) + abs(thing[1] - target[1]) for target in targets))
 	def runto(self):
 		ax = abs(self.x - self.target.x)
 		ay = abs(self.y - self.target.y)
@@ -185,123 +210,92 @@ class Sprite():
 	def update(self):
 		newpos = self.move()
 		if newpos == None:
-			pass
-		elif self.validate(newpos) == True:
+			pass #for objects like corpses and grass that doesn't move
+		elif self.validate(newpos):
 			self.x, self.y = newpos
+	def find_path(self, valid_targets, passable):
+		targets = set((target.x, target.y) for target in valid_targets)
 
-	#The begining of searching
-	#TODO"search":
-	#Change it so that it searches intelligently towards the nearest object and check if some other could be theoretically closer, but CHOOSE the closest object
-	def search(self, dest, passit):
-		self.q, self.done, self.znaky, self.index = queue.Queue(), False, ["A"], 0
-		self.q.put((0, self.y, self.x))
-		self.pole = [[" "]*self.mapa.x for i in range(self.mapa.y)]
-		for obj in self.mapa.grass:
-			self.pole[obj.x][obj.y] = obj.znak
-		for obj in self.mapa.stone + self.mapa.corpses:
-			self.pole[obj.x][obj.y] = obj.znak
-		for obj in self.mapa.objs:
-			self.pole[obj.x][obj.y] = "{}{}".format(obj.znak, str(obj.ID)) # TODO: instead look what is at the tile they found (and choose from these objs)
-		self.pole[self.x][self.y] = "$" #is $ needed?
-		self.path = []
-		if self.searchthere(dest, passit):
-			return self.searchback()
-		return None
-	def searchthere(self, dest, passit):
-		while not self.done:
-			if not self.q.empty():
-				me, x, y = self.q.get()
-				for pos in ((x, y - 1), (x + 1, y), (x, y + 1), (x - 1, y)):
-					self.searchit(pos[0], pos[1], me + 1, dest, passit)
-					if self.done:
+		a_star_path = []
+		heapq.heapify(a_star_path)
+		heapq.heappush(a_star_path, (0, 0, (self.x, self.y) ))
+
+		marked_map = [[" "]*self.mapa.x for i in range(self.mapa.y)]
+		for obj in self.mapa.get_impassable_objects():
+			marked_map[obj.x][obj.y] = "#"
+		for target in valid_targets:
+			marked_map[target.x][target.y] = "&"
+		marked_map[self.x][self.y] = "$"
+
+		try:
+			while a_star_path:
+				source = heapq.heappop(a_star_path)
+				next_step = -source[1] +1
+				ghost = source[2]
+				for offset in ((1,0), (0,1), (-1,0), (0,-1)):
+					next_tile = (ghost[0] + offset[0], ghost[1] + offset[1])
+					if marked_map[next_tile[0]][next_tile[1]] == "&":
+						raise PathFound
+					elif marked_map[next_tile[0]][next_tile[1]] in passable:
+						target_remoteness = self.get_shortest_distance_from(next_tile, targets)
+						if self.validate(next_tile):
+							heapq.heappush(a_star_path, (
+								target_remoteness + next_step, #total_distance
+								-next_step, #negative next_step for sorting
+								next_tile, #(x, y)
+								))
+							marked_map[next_tile[0]][next_tile[1]] = next_step
+			return None #if no path was found
+		except PathFound:
+			#prevent crossing any other sheep pathes (1st part)
+			taken_tiles = self.mapa.get_all_sheep_pathes()
+
+			self.path_exists = True
+			self.what_i_want_to_get_to = self.mapa.get_grass_by_position(next_tile) #TODO"optimalization": save whole tuple (then iterate)
+			self.path = [ghost]
+			while True:
+				possible_tiles = [] #set() doesn't sort, so it has to be list
+				#TODO"moovement_direction": change_direction	boolean
+				for offset in ((1,0), (0,1), (-1,0), (0,-1)):
+					next_tile = (ghost[0] + offset[0], ghost[1] + offset[1])
+					distance_from_beacon = marked_map[next_tile[0]][next_tile[1]]
+					if type(distance_from_beacon) == type(int()):
+						possible_tiles.append((-distance_from_beacon, next_tile)) #minus for sorting
+					elif distance_from_beacon == "$":
 						break
-			else:
+
+				if distance_from_beacon == "$":
+					break
+
+				possible_tiles.sort()
+				p_t = possible_tiles.pop()
+				shortest_distance = p_t[0]
+				possible_tiles_2 = {p_t[1]}
+				for t in possible_tiles:
+					if t[0] == shortest_distance:
+						possible_tiles_2.add(t[1])
+				possible_tiles = possible_tiles_2
+				#prevent crossing any other sheep pathes (2nd part)
+				untaken_tiles = possible_tiles - taken_tiles
+				if len(untaken_tiles):
+					ghost = untaken_tiles.pop()
+				else:
+					ghost = possible_tiles.pop()
+
+				self.path.append(ghost)
+
+		return True #so then checking whether returned value == None is information-ful
+
+	def path_is_not_blocked(self):
+		for tile in self.path:
+			if not self.validate(tile):
 				return False
 		return True
-	def searchit(self, x, y, next, dest, passit):
-		place = self.pole[y][x]
-		if place in passit: # next to => passit = []
-			self.pole[y][x] = self.mapa.znaky[next]
-			self.q.put((next, x, y))
-		elif place in dest:
-			self.path.append((x, y))
-			self.done = True
-			self.destin, self.destx, self.desty = next, x, y #TODO"path": check x, y for objects and save targeted object as self.path_target
-			#TODO
-			#for obj in grass+corpses+objects: # if self.target mark == ".": grass; if self.target mark =="s", or "S" or "C": corpses + objects
-				#if x,y are right and obj.mark_on_map in dest:
-					#self.path_target = obj
-	def searchback(self):
-		#self.path_boolean = True
-		for i in range(self.destin - 1):
-			for e in ((self.destx, self.desty - 1), (self.destx + 1, self.desty), (self.destx, self.desty + 1), (self.destx - 1, self.desty)):
-				self.findback(e[0], e[1])
-		#for PP
-
-		#x, y = self.mapa.x, self.mapa.y
-		#for row in range(y):
-		#	for point in range(x):
-		#		if len(self.pole[row][point]) > 1:
-		#			self.pole[row][point] = self.pole[row][point][0]
-		#self.pole_print = []
-		#for row in self.pole:
-		#	self.pole_print.append("".join(row))
-		##print("\n".join(self.pole_print))
-
-		#end for PP
-		return self.desty, self.destx
-	def findback(self, x, y):
-		place = self.pole[y][x]
-		if place == self.mapa.znaky[self.destin - 1]:
-			#TODO"path": MAYBE let run the last layer (7th for example) and save ALL possible patches, then sheep will run the ones that have most same tiles and cut off if any is not validated
-			#BUT it may be slower than search from begining for new path if current is interupted
-			self.pole[y][x] = "X"
-			self.path.append((x, y))
-			self.destin, self.destx, self.desty = self.destin - 1, x, y
-	#End of searching
-	#BETTER searching
-	def b_search(self, targets, ignore, pole = False, targets_used = []):
-		#set variables
-		#self.targets, self.ignore = targets, ignore
-		q = queue.Queue()
-		q.put((0, self.x, self.y))
-		if not pole:
-			self.pole = [[" "]*self.mapa.x for i in range(self.mapa.y)]
-			for obj in self.mapa.grass:
-				self.pole[obj.x][obj.y] = obj.znak
-			for obj in self.mapa.stone + self.mapa.corpses + self.mapa.objs:
-				self.pole[obj.x][obj.y] = obj.znak
+	def path_is_shortest_possible(self, valid_targets):
+		if len(self.path) + 1 == min(set(self.get_distance_from((self.x, self.y), target) for target in valid_targets)):
+			return True
 		else:
-			self.pole = pole
-		#set target
-		target_closest = None
-		distance = self.mapa.x * self.mapa.y#distance, distance_previous = [self.mapa.x * self.mapa.y]*2
-		targets_possible = self.mapa.grass + self.mapa.corpses + self.mapa.objs
-		for e in targets_used:
-			if e in targets_possible:
-				del targets_possible[targets_possible.index(e)]
-		for tar in targets_possible: #filter instead of if znak
-			if tar.znak in self.targets:
-				dist = abs(self.x - tar.x) + abs(self.y - tar.y)
-				if dist < distance:
-					distance = dist #distance, distance_previous = dist, distance
-					target_closest = tar
-		if target_closest == None:
-			return None
-		#search
-		#Take the places that are closest (dist) to target and put the +1 all around them, then mark them as used. In next cycle the closest only will be choosen to do it`s thing. If no new places are created and the target is still not found then use the ones not marked as used.
-		walked = 0
-		while True:
-			me, x, y = q.get()
-			for xy in ((x, y-1), (x+1, y), (x, y+1), (x-1, y)):
-				dist = abs(target_closest.x - xy[0]) + abs(target_closest.y - xy[1])
-			walked += 1
-					
-		#if self.searchthere(dest, passit):
-		#	return self.searchback()
-		#return None
-	#end of BETTER searching
-
+			return False
 	def augment(self, znak, close = False): # Just for Sheep so far
 		for obj in self.opposites:
 			if abs(self.x - obj.x) + abs(self.y - obj.y) == 1:
@@ -320,6 +314,11 @@ class Sprite():
 				self.evolution += 1
 				for i in range(values.Sheep_baby_evolution_cost):
 					self.hunger()
+class GoByPath(Exception):
+	pass
+
+class PathFound(Exception):
+	pass
 
 
 class Dog(Sprite):
@@ -363,8 +362,7 @@ class Sheep(Sprite):
 		super().__init__("S", y, x, mapa, "sheep.png")
 		self.ID = ID
 		self.hungry = values.Sheep_start_food
-		#self.path_boolean = False #just self.path_target == None?
-		#self.path_target = None
+		self.path_exists = False
 	def move(self):
 		self.hunger()
 		goto = None
@@ -373,30 +371,30 @@ class Sheep(Sprite):
 				self.eat(".", self.eatthat)
 				goto = True
 			else:
-				#if self.path_boolean:
-				gofor = self.mapa.grass#
-				if len(gofor) != 0:
-					#TODO"path":
-					#validate that the self.path_target exist
-					#validate() each of path steps
-					#check for closer <grass> than len(self.path_list)
-					#!!!no list of banned <grass> (because of moving objects)
-					#go by self.path[-1]
-				#if not self.path_boolean:
-					goto = self.search(["."], [" "]) #TODO"path": replace that
-		elif self.priority == "augment":
-			self.opposites = list(filter(lambda obj: obj.znak == "S" and obj.priority == "augment" and self.ID != obj.ID, self.mapa.objs))
+				if len(self.mapa.grass) != 0:
+					try:
+						if self.path_exists:
+							if self.what_i_want_to_get_to in self.mapa.grass:
+								if self.path_is_not_blocked():
+									if self.path_is_shortest_possible(self.mapa.grass):
+										raise GoByPath
+						if self.find_path(self.mapa.grass, {" "}) != None:
+							if self.what_i_want_to_get_to in self.mapa.grass:
+								raise GoByPath
+							else:
+								goto = None
+					except GoByPath:
+						goto = self.path.pop()
+		elif self.priority == "augment": # TODO"optimalization": has to be optimalized!! (path remembering, partners share remembered path)
+			self.opposites = set(filter(lambda obj: obj.znak == "S" and obj.priority == "augment" and self.ID != obj.ID, self.mapa.objs))
 			if len(self.opposites) > 0:
 				if self.augment("S", True):
 					self.augment("S")
 				else:
-					#TODO"path":
-					#new path finding will work with different rules
-					#they will find a path, check if there is theoretical shorter path, then one of them will remember it, the second one will use it as well,
-					#one from one side of the list, the other from the other
-					#that means that there will be "love" and they might start to augment later if they find a partner AND they will already know how much the path will take them,
-					#if one don't want to risk low food supply, then the "love" is canceled and the second one might find another partner if he has enough food
-					goto = self.search([opp.znak + str(opp.ID) for opp in self.opposites], [" ", "."]) #format
+					self.find_path(self.opposites, {" ", "."})
+					goto = self.path.pop()
+			else:
+				self.path = [] # so that path is not shown if partner isn't avaible anymore
 		if goto == True:
 			goto = None
 		elif goto == None:
@@ -413,8 +411,7 @@ class Sheep_baby(Sprite):
 		self.ID = ID
 		self.hungry = values.Sheep_baby_start_food
 		self.evolution = 0
-		#self.path_boolean = False #just self.path_target == None?
-		#self.path_target = None
+		self.path_exists = False
 	def move(self):
 		self.hunger()
 		goto = None
@@ -423,9 +420,20 @@ class Sheep_baby(Sprite):
 				self.eat(".", self.eatthat)
 				goto = True
 			else:
-				gofor = self.mapa.grass#
-				if len(gofor) != 0:
-					goto = self.search(["."], [" "])#
+				if len(self.mapa.grass) != 0:
+					try:
+						if self.path_exists:
+							if self.what_i_want_to_get_to in self.mapa.grass:
+								if self.path_is_not_blocked():
+									if self.path_is_shortest_possible(self.mapa.grass):
+										raise GoByPath
+						if self.find_path(self.mapa.grass, {" "}) != None:
+							if self.what_i_want_to_get_to in self.mapa.grass:
+								raise GoByPath
+							else:
+								goto = None
+					except GoByPath:
+						goto = self.path.pop()
 		elif self.priority == "evolve":
 			self.evolve()
 			beh = randint(0, 125) ##
@@ -497,18 +505,8 @@ class Run():
 		go = True
 		wait = time()
 		paused = False
-		#for PP
-		#i = 0
-		#end for PP
 		while go:
 			#TODO"stats":hower over (write "Sheep n.8") to show stats(food, path, priority... everything)
-			#for PP
-			#i += 1
-			#if i % 100 == 0:
-			#	print(i)
-			#	go = False
-			#end for PP
-		#	a = time()
 			if ver == "graphic" and values.FPS > 0:
 				pygame.time.Clock().tick(values.FPS)
 			elif ver == "text" and values.FPS > 0:
@@ -545,6 +543,5 @@ class Run():
 				waitfor = 1/values.FPS + time() - wait
 				if waitfor > 0:
 					sleep(waitfor)
-		#	print(time.time() - a)
 		#if go == False:
 		#	save and such

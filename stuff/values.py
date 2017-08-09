@@ -1,6 +1,7 @@
 FPS = 30 #Frames per second AND turns per second; any natural number; 0 means as much as possible; default = 30
 map_width = 60 #Map width; any natural number higher than 2; default = 60
 map_height = 25 #Map height; any natural number higher than 2; default = 25
+seed = "random" #Decides what should happen when event is random such as place of generated grass, speed of Sheep_baby evolving, running while idle etc. same seeds result in identical simulations; anything, "random" means that it will be picked at random; default = "random"
 
 Dogs = 2 #Starting numer of Dogs; any natural number; default = 2
 Dog_start_food = 100 #Food that Dogs have in stomach at start; any natural number higher than 0 (because 0 means it will die immediatelly); default = 100
@@ -35,3 +36,6 @@ Grass_spawn_rate = 1 #Grass is spawned in random intervals between [1 and Grass_
 Grass_food = 7 #Food Grass have on spawn; any natural number higher than 0 (because 0 means it will erase immediatelly); default = 7
 Grass_grow = 1 #Amount by which is increased food supply each turn in each Grass; any whole number (grass may dying); default = 1
 Grass_max = 50 #Maximal amount of food that can be in one Grass thingie; any natural number higher than 0; default = 50
+
+
+DaSversion = "1.0.0" # Current version, written in log file; Changing that will result in shenanigans in crash resolving.

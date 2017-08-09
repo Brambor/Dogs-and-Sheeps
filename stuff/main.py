@@ -1,5 +1,5 @@
 import heapq
-from random import randint
+import random
 from time import sleep, time
 import queue
 import sys
@@ -9,6 +9,18 @@ from stuff import values
 try:
 	import pygame
 except ImportError:
+	pass
+
+class GoByPath(Exception):
+	pass
+
+class PathFound(Exception):
+	pass
+
+class OppositeExists(Exception):
+	pass
+
+class OppositeNotFound(Exception):
 	pass
 
 class Map():
@@ -25,7 +37,7 @@ class Map():
 				self.track[t] = pygame.image.load("stuff/pic/track_{}.png".format(t)).convert_alpha()
 		self.objs, self.corpses, self.grass, self.stone, self.ID = [], [], [], [], 0
 		self.colouring = None
-		self.wait = randint(1, values.Grass_spawn_rate)
+		self.wait = random.randint(1, values.Grass_spawn_rate)
 		self.znaky = ["$"]
 		for i in range(self.x*self.y):
 			self.znaky.append(str(i))
@@ -78,19 +90,8 @@ class Map():
 			obj.update()
 		self.wait -= 1
 		if self.wait == 0:
-			self.wait = randint(1, values.Grass_spawn_rate)
-			self.addg(Grass(randint(1, self.x - 2), randint(1, self.y - 2), self)) # idea: grass should not be spawning on occupied tiles
-	def get_objs_by_position(self, pos):
-		to_return = set()
-		for obj in self.objs:
-			if obj.x == pos[0] and obj.y == pos[1]:
-				to_return.add(obj)
-		return to_return
-	def get_grass_by_position(self, pos):
-		for g in self.grass:
-			if g.x == pos[0] and g.y == pos[1]:
-				return g
-		return False
+			self.wait = random.randint(1, values.Grass_spawn_rate)
+			self.addg(Grass(random.randint(1, self.x - 2), random.randint(1, self.y - 2), self)) # idea: grass should not be spawning on occupied tiles
 	def get_impassable_objects(self):
 		return self.objs + self.corpses + self.stone
 	def get_all_sheep_pathes(self):
@@ -151,6 +152,12 @@ class Sprite():
 		return abs(thing[0] - target.x) + abs(thing[1] - target.y)
 	def get_shortest_distance_from(self, thing, targets):
 		return min(set(abs(thing[0] - target[0]) + abs(thing[1] - target[1]) for target in targets))
+	def get_objs_by_position(self, objs, pos):
+		to_return = set()
+		for obj in objs:
+			if obj.x == pos[0] and obj.y == pos[1]:
+				to_return.add(obj)
+		return to_return
 	def runto(self):
 		ax = abs(self.x - self.target.x)
 		ay = abs(self.y - self.target.y)
@@ -186,22 +193,22 @@ class Sprite():
 			self.mapa.objs.remove(self)
 		elif (self.znak == "S" and self.hungry < values.Sheep_I_am_hungry) or (self.znak == "s" and self.hungry < values.Sheep_baby_I_am_hungry) or (self.znak == "D" and self.hungry < values.Dog_I_am_hungry):
 			self.priority = "eat"
-	def eat(self, eatit, toeat):
+	def eat(self, eatit):
+		toeat = self.eat_per_turn
 		for obj in self.mapa.corpses + self.mapa.grass:
 			if abs(self.x - obj.x) + abs(self.y - obj.y) == 1 and eatit == obj.znak:
-				if toeat == 0:
-					return True
 				if toeat > obj.food:
 					toeat = obj.food
 				obj.food -= toeat
 				self.hungry += toeat
 				if self.znak == "S" and self.hungry >= values.Sheep_stomach:
 					self.priority = "augment"
-				if self.znak == "s" and self.hungry >= values.Sheep_baby_stomach:
+				elif self.znak == "s" and self.hungry >= values.Sheep_baby_stomach:
 					self.priority = "evolve"
 				elif self.znak == "D" and self.hungry >= values.Dog_stomach:
 					self.priority = "augment"
-				return
+				return True
+		return False
 	def validate(self, goto):
 		for obj in self.mapa.objs + self.mapa.corpses + self.mapa.stone:
 			if goto[0] == obj.x and goto[1] == obj.y:
@@ -213,8 +220,9 @@ class Sprite():
 			pass #for objects like corpses and grass that doesn't move
 		elif self.validate(newpos):
 			self.x, self.y = newpos
-	def find_path(self, valid_targets, passable):
+	def find_path(self, valid_targets, passable, purpose = "eat"):
 		targets = set((target.x, target.y) for target in valid_targets)
+		valid_targets = set(valid_targets)
 
 		a_star_path = []
 		heapq.heapify(a_star_path)
@@ -251,7 +259,16 @@ class Sprite():
 			taken_tiles = self.mapa.get_all_sheep_pathes()
 
 			self.path_exists = True
-			self.what_i_want_to_get_to = self.mapa.get_grass_by_position(next_tile) #TODO"optimalization": save whole tuple (then iterate)
+			#save target
+			objs = self.get_objs_by_position(self.mapa.objs + self.mapa.grass + self.mapa.corpses, next_tile)
+			self.what_i_want_to_get_to = (objs & valid_targets).pop() #TODO"optimalization":? save whole tuple (then iterate)
+			if purpose == "augment":
+				self.significant_other = self.what_i_want_to_get_to
+
+				self.significant_other.path_exists = True
+				self.significant_other.what_i_want_to_get_to = self
+				self.significant_other.significant_other = self
+			#save path
 			self.path = [ghost]
 			while True:
 				possible_tiles = [] #set() doesn't sort, so it has to be list
@@ -260,7 +277,7 @@ class Sprite():
 					next_tile = (ghost[0] + offset[0], ghost[1] + offset[1])
 					distance_from_beacon = marked_map[next_tile[0]][next_tile[1]]
 					if type(distance_from_beacon) == type(int()):
-						possible_tiles.append((-distance_from_beacon, next_tile)) #minus for sorting
+						possible_tiles.append((-distance_from_beacon, next_tile))
 					elif distance_from_beacon == "$":
 						break
 
@@ -284,10 +301,14 @@ class Sprite():
 
 				self.path.append(ghost)
 
-		return True #so then checking whether returned value == None is information-ful
+			if purpose == "augment":
+				smaller_half = int((len(self.path))/2)
+				self.significant_other.path = self.path[:smaller_half]
+				self.significant_other.path.reverse()
+				self.path = self.path[smaller_half:]
 
-	def path_is_not_blocked(self):
-		for tile in self.path:
+	def path_is_not_blocked(self, path):
+		for tile in path:
 			if not self.validate(tile):
 				return False
 		return True
@@ -296,34 +317,29 @@ class Sprite():
 			return True
 		else:
 			return False
-	def augment(self, znak, close = False): # Just for Sheep so far
-		for obj in self.opposites:
+	def augment(self, znak, opposites): # Just for Sheep so far
+		for obj in opposites:
 			if abs(self.x - obj.x) + abs(self.y - obj.y) == 1:
-				if close:
-					return True
 				self.hungry, obj.hungry = self.hungry - values.Sheep_rp_food_consume, obj.hungry - values.Sheep_rp_food_consume
 				self.priority, obj.priority = ["eat"]*2
+				self.significant_other, obj.significant_other = [None]*2
 				self.mapa.add(Sheep_baby(self.y, self.x, self.mapa.ID, self.mapa))
-				return
+				return True
+		return False
 	def evolve(self):
 		if self.znak == "s":
 			if self.evolution == values.Sheep_baby_evolution:
 				self.mapa.objs.remove(self)
 				self.mapa.add(Sheep(self.y, self.x, self.mapa.ID, self.mapa))
-			elif randint(1, values.Sheep_baby_evolution_chance) == values.Sheep_baby_evolution_chance:
+			elif random.randint(1, values.Sheep_baby_evolution_chance) == values.Sheep_baby_evolution_chance:
 				self.evolution += 1
 				for i in range(values.Sheep_baby_evolution_cost):
 					self.hunger()
-class GoByPath(Exception):
-	pass
-
-class PathFound(Exception):
-	pass
 
 
 class Dog(Sprite):
 	food = values.Dog_corpse_food
-	eatthat = values.Dog_eat
+	eat_per_turn = values.Dog_eat
 	def __init__(self, y, x, ID, mapa):
 		super().__init__("D", y, x, mapa, "dog.png")
 		self.ID = ID
@@ -332,13 +348,11 @@ class Dog(Sprite):
 		self.hunger()
 		goto = None
 		if self.priority == "eat":
-			if self.eat("C", 0):
-				self.eat("C", self.eatthat)
-			else:
+			if not self.eat("C"):
 				sheeps = list(filter(lambda obj: obj.znak == "S" or obj.znak == "s", self.mapa.objs))
 				corpses = self.mapa.corpses
 				if len(corpses) + len(sheeps) == 0:
-					beh = randint(0, 150)
+					beh = random.randint(0, 150)
 					goto = self.runrand(beh)
 				else:
 					gofor = corpses #C
@@ -350,32 +364,32 @@ class Dog(Sprite):
 						self.mapa.addc(Corpse(self.target.y, self.target.x, self.mapa, self.target.food))
 						self.mapa.objs.remove(self.target)
 		else:
-			beh = randint(0, 175)
+			beh = random.randint(0, 175)
 			goto = self.runrand(beh)
 		return goto
 
 class Sheep(Sprite):
 	food = values.Sheep_corpse_food
-	eatthat = values.Sheep_eat
+	eat_per_turn = values.Sheep_eat
 	run = 200
 	def __init__(self, y, x, ID, mapa):
 		super().__init__("S", y, x, mapa, "sheep.png")
 		self.ID = ID
 		self.hungry = values.Sheep_start_food
 		self.path_exists = False
+		self.significant_other = None
 	def move(self):
 		self.hunger()
 		goto = None
 		if self.priority == "eat":
-			if self.eat(".", 0):
-				self.eat(".", self.eatthat)
+			if self.eat("."):
 				goto = True
 			else:
 				if len(self.mapa.grass) != 0:
 					try:
 						if self.path_exists:
 							if self.what_i_want_to_get_to in self.mapa.grass:
-								if self.path_is_not_blocked():
+								if self.path_is_not_blocked(self.path):
 									if self.path_is_shortest_possible(self.mapa.grass):
 										raise GoByPath
 						if self.find_path(self.mapa.grass, {" "}) != None:
@@ -386,25 +400,36 @@ class Sheep(Sprite):
 					except GoByPath:
 						goto = self.path.pop()
 		elif self.priority == "augment": # TODO"optimalization": has to be optimalized!! (path remembering, partners share remembered path)
-			self.opposites = set(filter(lambda obj: obj.znak == "S" and obj.priority == "augment" and self.ID != obj.ID, self.mapa.objs))
-			if len(self.opposites) > 0:
-				if self.augment("S", True):
-					self.augment("S")
-				else:
-					self.find_path(self.opposites, {" ", "."})
-					goto = self.path.pop()
+		#those who are far
+			opposites = set(filter(lambda obj: obj.znak == "S" and obj.priority == "augment" and self.ID != obj.ID, self.mapa.objs))
+			if len(opposites) > 0:
+				try:
+					if self.significant_other in opposites:
+						if self.significant_other.significant_other == self:
+							if self.path_is_not_blocked(self.path):
+								if self.path_is_not_blocked(self.significant_other.path):
+									raise OppositeExists
+					raise OppositeNotFound
+				except OppositeExists:
+					if not self.augment("S", {self.significant_other}):
+						goto = self.path.pop()
+				except OppositeNotFound:
+					if not self.augment("S", opposites):
+						self.find_path(opposites, {" ", "."}, purpose="augment")
+						goto = self.path.pop()
 			else:
 				self.path = [] # so that path is not shown if partner isn't avaible anymore
+				self.significant_other = None #and, for sure, no SO exist anymore
 		if goto == True:
 			goto = None
 		elif goto == None:
-			beh = randint(0, self.run)
+			beh = random.randint(0, self.run)
 			goto = self.runrand(beh)
 		return goto
 
 class Sheep_baby(Sprite):
 	food = values.Sheep_baby_corpse_food
-	eatthat = values.Sheep_baby_eat
+	eat_per_turn = values.Sheep_baby_eat
 	run = 200
 	def __init__(self, y, x, ID, mapa):
 		super().__init__("s", y, x, mapa, "sheep_baby.png")
@@ -416,15 +441,14 @@ class Sheep_baby(Sprite):
 		self.hunger()
 		goto = None
 		if self.priority == "eat":
-			if self.eat(".", 0):
-				self.eat(".", self.eatthat)
+			if self.eat("."):
 				goto = True
 			else:
 				if len(self.mapa.grass) != 0:
 					try:
 						if self.path_exists:
 							if self.what_i_want_to_get_to in self.mapa.grass:
-								if self.path_is_not_blocked():
+								if self.path_is_not_blocked(self.path):
 									if self.path_is_shortest_possible(self.mapa.grass):
 										raise GoByPath
 						if self.find_path(self.mapa.grass, {" "}) != None:
@@ -436,12 +460,12 @@ class Sheep_baby(Sprite):
 						goto = self.path.pop()
 		elif self.priority == "evolve":
 			self.evolve()
-			beh = randint(0, 125) ##
+			beh = random.randint(0, 125) ##
 			goto = self.runrand(beh)
 		if goto == True:
 			goto = None
 		elif goto == None:
-			beh = randint(0, self.run)
+			beh = random.randint(0, self.run)
 			goto = self.runrand(beh)
 		return goto
 
@@ -477,19 +501,25 @@ class Run():
 		global ver
 		ver = version
 
+		if values.seed == "random":
+			seed = int(random.random()*10**17)
+		else:
+			seed = values.seed
+		random.seed(seed)
+
 		mapa = Map(values.map_height, values.map_width)
 
 		for i in range(values.Dogs):
-			mapa.add(Dog(randint(1, mapa.x-2), randint(1, mapa.y -2), mapa.ID, mapa))
+			mapa.add(Dog(random.randint(1, mapa.x-2), random.randint(1, mapa.y -2), mapa.ID, mapa))
 			
 		for i in range(values.Sheep):
-			mapa.add(Sheep(randint(1, mapa.x-2), randint(1, mapa.y -2), mapa.ID, mapa))
+			mapa.add(Sheep(random.randint(1, mapa.x-2), random.randint(1, mapa.y -2), mapa.ID, mapa))
 
 		for i in range(values.Sheep_baby):
-			mapa.add(Sheep_baby(randint(1, mapa.x-2), randint(1, mapa.y -2), mapa.ID, mapa))
+			mapa.add(Sheep_baby(random.randint(1, mapa.x-2), random.randint(1, mapa.y -2), mapa.ID, mapa))
 			
 		for i in range(values.Grass):
-			mapa.addg(Grass(randint(1, mapa.x-2), randint(1, mapa.y -2), mapa))
+			mapa.addg(Grass(random.randint(1, mapa.x-2), random.randint(1, mapa.y -2), mapa))
 
 		for i in range(mapa.y):
 			mapa.adds(Stone(0, i, mapa))
@@ -503,45 +533,61 @@ class Run():
 		mapa.draw()
 		sleep(1.5)
 		go = True
+		mapa.tick = 0
 		wait = time()
 		paused = False
-		while go:
-			#TODO"stats":hower over (write "Sheep n.8") to show stats(food, path, priority... everything)
-			if ver == "graphic" and values.FPS > 0:
-				pygame.time.Clock().tick(values.FPS)
-			elif ver == "text" and values.FPS > 0:
-				wait = time()
-			if not paused or one_more_frame:
-				mapa.update()
-			mapa.draw() # add FPS
+		sprite = Sprite(None, None, None, None, "stone.png")
+		try:
+			while go:
+				if ver == "graphic" and values.FPS > 0:
+					pygame.time.Clock().tick(values.FPS)
+				elif ver == "text" and values.FPS > 0:
+					wait = time()
+				if not paused or one_more_frame:
+					mapa.tick += 1
+					mapa.update()
+
+				mapa.draw()
+				if ver == "graphic":
+					one_more_frame = False
+					pos = pygame.mouse.get_pos()
+					pos = (int(pos[0]/12), int(pos[1]/8))
+					objs = sprite.get_objs_by_position(mapa.objs, (pos[1], pos[0]))
+					for obj in objs:
+						if obj.znak == "S" or "s":
+							mapa.colouring = obj.path
+
+					for event in pygame.event.get():
+						if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+							go = False
+						elif event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+							if paused:
+								paused = False
+							else:
+								paused = True
+						elif event.type == pygame.KEYDOWN and event.key == pygame.K_f:
+							one_more_frame = True
+						elif event.type == pygame.QUIT:
+							sys.exit()
+
+				elif ver == "text" and values.FPS > 0:
+					wait = time()
+					waitfor = 1/values.FPS + time() - wait
+					if waitfor > 0:
+						sleep(waitfor)
+		except SystemExit:
+			raise
+		except:
+			from stuff.crash_catcher import write_log_file, send_mail
 			if ver == "graphic":
-				one_more_frame = False
-				pos = pygame.mouse.get_pos()
-				pos = (int(pos[0]/12), int(pos[1]/8))
-				objs = mapa.get_objs_by_position((pos[1], pos[0]))
-				for obj in objs:
-					if obj.znak == "S" or "s": #or "D"
-						mapa.colouring = obj.path
-
-				for event in pygame.event.get():
-					if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-						go = False
-					elif event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-						if paused:
-							paused = False
-						else:
-							paused = True
-					elif event.type == pygame.KEYDOWN and event.key == pygame.K_f:
-						one_more_frame = True
-					elif event.type == pygame.QUIT:
-						#print("Thanks for using!")
-						#sleep(2)
-						sys.exit()
-
-			elif ver == "text" and values.FPS > 0:
-				wait = time()
-				waitfor = 1/values.FPS + time() - wait
-				if waitfor > 0:
-					sleep(waitfor)
-		#if go == False:
-		#	save and such
+				crash_img = pygame.image.load("stuff/pic/crash.png").convert_alpha()
+				crash_rect = crash_img.get_rect()
+				crash_rect.center = (values.map_width*6, values.map_height*4)
+				mapa.screen.blit(crash_img, crash_rect)
+				pygame.display.update()
+			print("\n\nSomething happened and the program is about to crash")
+			print("\nseed:{seed}\ntick:{tick}".format(seed = seed, tick = mapa.tick))
+			path_to_file = write_log_file(seed, mapa.tick)
+			send_mail(path_to_file)
+			input("\nPress Enter to crash")
+			raise

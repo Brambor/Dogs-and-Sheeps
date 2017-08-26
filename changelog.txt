@@ -1,0 +1,17 @@
+1.0.1
+
+Select
+- Sheeps and Sheep_baby now can be selected and deselected (hotkeys a, d, t, LMB)
+- Selected objects show their path
+
+Features
+- on exiting simulation number of ticks passed is printed to console
+
+Changes
+- changed some texts
+- north-west and south-east tracks were moved by a pixel
+- when path is drawed the target tile is marked with cross rather than red-highlighted box
+- Grass_spawn_rate is now a set with minimum and maximum rather than integer marking only maximum
+
+Few tweeks in code
+-for performance, readability

@@ -32,10 +32,10 @@ Sheep_baby_evolution_chance = 3 #What is the chance of getting an evolution poin
 Sheep_baby_evolution_cost = 3 #How much of hunger*Sheep_baby_hungry will it use per one evolution token; any natural number; default = 3
 
 Grass = 200 #Starting numer of Grass; any natural number; default = 200
-Grass_spawn_rate = 1 #Grass is spawned in random intervals between [1 and Grass_spawn_rate] turns, so smaller interval means more grass spawned over time; any natural number higher than 0; default = 1
+Grass_spawn_rate = (1, 1) #Grass is spawned in random intervals between [1st and 2nd value] turns, so smaller numbers means more grass spawned over time; any natural number higher than 0; default = (1, 1)
 Grass_food = 7 #Food Grass have on spawn; any natural number higher than 0 (because 0 means it will erase immediatelly); default = 7
 Grass_grow = 1 #Amount by which is increased food supply each turn in each Grass; any whole number (grass may dying); default = 1
 Grass_max = 50 #Maximal amount of food that can be in one Grass thingie; any natural number higher than 0; default = 50
 
 
-DaSversion = "1.0.0" # Current version, written in log file; Changing that will result in shenanigans in crash resolving.
+DaSversion = "1.0.1" # Current version, written in log file; Changing that will result in shenanigans in crash resolving.

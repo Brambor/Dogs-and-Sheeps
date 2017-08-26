@@ -56,8 +56,8 @@ def write_log_file(seed, tick):
 	return path_to_file
 
 def send_mail(file):
-	print("""\n\nPlease send us mail to DogsAndSheepsSupp@gmail.com containing
-'{file}'
+	print("""\n\nPlease send us mail to DogsAndSheepsSupp@gmail.com and describe what were you doing before the crash
+please include '{file}' in the crash report
 We will inform you about the progress and fix the crash as soon as possible.""".format(
 	file = file,
 	))

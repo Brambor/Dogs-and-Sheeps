@@ -81,10 +81,7 @@ class Map():
 			x, y = self.x, self.y
 			pole = [[" "]*x for i in range(y)]
 
-			for obj in self.grass:
-				pole[obj.x][obj.y] = obj.znak
-			
-			for obj in self.stone + self.corpses + self.sheep + self.sheep_babies + self.dogs:
+			for obj in self.grass + self.stone + self.corpses + self.sheep + self.sheep_babies + self.dogs:
 				pole[obj.x][obj.y] = obj.znak
 			
 			for row in range(y):
@@ -94,6 +91,7 @@ class Map():
 			print(pole, end = "")
 
 	def update(self):
+		# -> order -> (Sheep are always first)
 		for obj in self.sheep + self.sheep_babies + self.dogs + self.grass + self.corpses:
 			obj.update()
 		self.wait -= 1
@@ -113,10 +111,7 @@ class Map():
 		path = obj.path + [(obj.x, obj.y)]
 		if len(path) < 2:
 			return None
-		owerturned_path = []
-		for p in path:
-			owerturned_path.append((p[1], p[0]))
-		path = owerturned_path
+		path = [(p1, p0) for p0, p1 in path]
 
 		self.screen.blit(self.track["cross"], (path[0][0]*12, path[0][1]*8))
 		for p in range(len(path) - 2):
@@ -149,14 +144,9 @@ class Sprite():
 			self.img = pygame.image.load("stuff/pic/{}".format(image)).convert_alpha()
 			self.rect = self.img.get_rect()
 	def move(self):
-		pass			
+		pass
 	def closest(self, ents):
-		far = self.mapa.x * self.mapa.y
-		for ent in ents: # min max?
-			nfar = abs(ent.x - self.x) + abs(ent.y - self.y)
-			if nfar < far:
-				far = nfar
-				self.target = ent
+		self.target = ents[min((abs(self.x - ent.x) + abs(self.y - ent.y), i) for i, ent in enumerate(ents))[1]]
 	def get_distance_from(self, thing, target):
 		return abs(thing[0] - target.x) + abs(thing[1] - target.y)
 	def get_shortest_distance_from(self, thing, targets):
@@ -173,13 +163,13 @@ class Sprite():
 		ax = abs(self.x - self.target.x)
 		ay = abs(self.y - self.target.y)
 		if ax + ay == 1:
-			return None	 
+			return None
 		if ax >= ay:
 			go = (1, 0)
 			if self.x > self.target.x:
 				go = (-1, 0)
 		else:
-			go = (0, 1)	 
+			go = (0, 1)
 			if self.y > self.target.y:
 				go = (0, -1)
 		return (self.x + go[0], self.y + go[1])

@@ -152,11 +152,11 @@ class Sprite():
 		pass			
 	def closest(self, ents):
 		far = self.mapa.x * self.mapa.y
-		for i in range(len(ents)): # min max?
-			nfar = abs(ents[i].x - self.x) + abs(ents[i].y - self.y)
+		for ent in ents: # min max?
+			nfar = abs(ent.x - self.x) + abs(ent.y - self.y)
 			if nfar < far:
 				far = nfar
-				self.target = ents[i]
+				self.target = ent
 	def get_distance_from(self, thing, target):
 		return abs(thing[0] - target.x) + abs(thing[1] - target.y)
 	def get_shortest_distance_from(self, thing, targets):

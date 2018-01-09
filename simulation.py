@@ -61,8 +61,8 @@ hower over a sheep to show the path it's taking""")
 				sys.exit()
 		buttons.draw(screen)
 	elif ver == "text":
-		for i in range(len(picnames)):
-			print("{}. {}".format(i + 1, picnames[i]))
+		for i, pic in enumerate(picnames, start=1):
+			print("{}. {}".format(i, pic))
 		choice = input()
 		if choice == "1" or choice == "Play":
 			main.Run(ver)

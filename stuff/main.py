@@ -150,7 +150,7 @@ class Sprite():
 	def get_distance_from(self, thing, target):
 		return abs(thing[0] - target.x) + abs(thing[1] - target.y)
 	def get_shortest_distance_from(self, thing, targets):
-		return min(set(abs(thing[0] - target[0]) + abs(thing[1] - target[1]) for target in targets))
+		return min(abs(thing[0] - target[0]) + abs(thing[1] - target[1]) for target in targets)
 	def get_objs_by_position(self, objs, pos):
 		to_return = set()
 		for obj in objs:
@@ -214,7 +214,7 @@ class Sprite():
 		if self.eat("."):
 			return True
 		else:
-			if len(self.mapa.grass) != 0:
+			if self.mapa.grass:
 				if self.search_for_grass():
 					return self.path.pop()
 	def next_to_grass(self):
@@ -317,7 +317,7 @@ class Sprite():
 				for offset in ((1,0), (0,1), (-1,0), (0,-1)):
 					next_tile = (ghost[0] + offset[0], ghost[1] + offset[1])
 					distance_from_beacon = marked_map[next_tile[0]][next_tile[1]]
-					if type(distance_from_beacon) == type(int()):
+					if type(distance_from_beacon) == int:
 						possible_tiles.append((-distance_from_beacon, next_tile))
 					elif distance_from_beacon == "$":
 						break
@@ -343,7 +343,7 @@ class Sprite():
 				self.path.append(ghost)
 
 			if purpose == "augment":
-				smaller_half = int((len(self.path))/2)
+				smaller_half = len(self.path)//2
 				self.significant_other.path = self.path[:smaller_half]
 				self.significant_other.path.reverse()
 				self.path = self.path[smaller_half:]
@@ -356,7 +356,7 @@ class Sprite():
 				return False
 		return True
 	def path_is_shortest_possible(self, valid_targets):
-		if len(self.path) + 1 == min(set(self.get_distance_from((self.x, self.y), target) for target in valid_targets)):
+		if len(self.path) + 1 == min(self.get_distance_from((self.x, self.y), target) for target in valid_targets):
 			return True
 		else:
 			return False
@@ -401,12 +401,12 @@ class Dog(Sprite):
 			if not self.eat("C"):
 				sheeps = self.mapa.sheep + self.mapa.sheep_babies
 				corpses = self.mapa.corpses
-				if len(corpses) + len(sheeps) == 0:
+				if (not corpses) and (not sheeps):
 					beh = random.randint(0, 150)
 					goto = self.runrand(beh)
 				else:
 					gofor = corpses #C
-					if len(corpses) == 0: #TODO: and if corpses are too far relative to sheep
+					if not corpses: #TODO: and if corpses are too far relative to sheep
 						gofor = sheeps #S
 					self.closest(gofor)# from here
 					goto = self.runto()
@@ -442,7 +442,7 @@ class Sheep(Sprite):
 			goto = self.herbivore()
 		elif self.priority == "augment":
 			opposites = self.get_opposites()
-			if len(opposites) > 0:
+			if opposites:
 				if not self.augment(opposites):
 					if self.search_for_opposite(opposites):
 						goto = self.path.pop()

@@ -51,7 +51,7 @@ class Map():
 		self.grass.append(obj)
 	def adds(self, obj):
 		self.stone.append(obj)
-	def draw(self):
+	def draw(self, frame=1):
 
 		if ver == "graphic":
 			self.screen.fill(self.bg_color)
@@ -65,14 +65,19 @@ class Map():
 			for obj in self.sheep + self.sheep_babies:
 				if obj.selected:
 					self.draw_path(obj)
-
-			for obj in self.grass:
+			
+			# <- on top <-
+			for obj in self.grass + self.stone + self.corpses:
 				obj.rect.topleft = (obj.y*12, obj.x*8)
 				self.screen.blit(obj.img, obj.rect)
 			
-			for obj in self.sheep + self.sheep_babies + self.dogs + self.stone + self.corpses:
-				obj.rect.topleft = (obj.y*12, obj.x*8)
-				self.screen.blit(obj.img, obj.rect)
+			for obj in self.sheep + self.sheep_babies + self.dogs:
+				if obj.last_pos == None:
+					obj.rect.topleft = (obj.y*12, obj.x*8)
+					self.screen.blit(obj.img, obj.rect)
+				else: #Smooth mooving
+					obj.rect.topleft = ( (obj.last_pos[1] + (obj.y - obj.last_pos[1])/values.FPU) *12, (obj.last_pos[0] + (obj.x - obj.last_pos[0])/values.FPU) *8 )
+					self.screen.blit(obj.img, obj.rect)
 
 			pygame.display.update()
 			
@@ -109,7 +114,12 @@ class Map():
 		return to_return
 	def draw_path(self, obj):
 		path = obj.path + [(obj.x, obj.y)]
-		if len(path) < 2:
+		if obj.last_pos != None:
+			path += [obj.last_pos]
+			used_last_pos = True
+		else:
+			used_last_pos = False
+		if len(path) < 2 + used_last_pos:
 			return None
 		path = [(p1, p0) for p0, p1 in path]
 
@@ -118,18 +128,28 @@ class Map():
 			to_directions = (path[p][0] - path[p+1][0], path[p][1] - path[p+1][1])
 			from_directions = (path[p+1][0] - path[p+2][0], path[p+1][1] - path[p+2][1])
 			#0: (0, -1) 1: (1, 0) 2: (0, 1) 3: (-1, 0)
-			if ((from_directions, to_directions) == ((0, 1), (1, 0))) or ((from_directions, to_directions) == ((-1, 0), (0, -1))):
-				track = self.track["01"]
-			elif ((from_directions, to_directions) == ((0, 1), (0, 1))) or ((from_directions, to_directions) == ((0, -1), (0, -1))):
-				track = self.track["02"]
-			elif ((from_directions, to_directions) == ((0, 1), (-1, 0))) or ((from_directions, to_directions) == ((1, 0), (0, -1))):
-				track = self.track["03"]
-			elif ((from_directions, to_directions) == ((-1, 0), (0, 1))) or ((from_directions, to_directions) == ((0, -1), (1, 0))):
-				track = self.track["12"]
-			elif ((from_directions, to_directions) == ((1, 0), (1, 0))) or ((from_directions, to_directions) == ((-1, 0), (-1, 0))):
-				track = self.track["13"]
-			elif ((from_directions, to_directions) == ((0, -1), (-1, 0))) or ((from_directions, to_directions) == ((1, 0), (0, 1))):
-				track = self.track["23"]
+			matrix = (
+				((0, 1), (1, 0)), ((-1, 0), (0, -1)),
+				((0, 1), (0, 1)), ((0, -1), (0, -1)),
+				((0, 1), (-1, 0)), ((1, 0), (0, -1)),
+				((-1, 0), (0, 1)), ((0, -1), (1, 0)),
+				((1, 0), (1, 0)), ((-1, 0), (-1, 0)),
+				((0, -1), (-1, 0)), ((1, 0), (0, 1)),
+			)
+			try:
+				track = self.track[
+					("01", "02", "03", "12", "13", "23")[
+						int(matrix.index((from_directions, to_directions))/2)
+					]
+				]
+			except ValueError:
+				from stuff.crash_catcher import write_log_file, send_mail
+				print("\n\nSomething happened and we wrote a log file,")
+				print("\nseed:{seed}\ntick:{tick}".format(seed = self.seed, tick = self.tick))
+				path_to_file = write_log_file(self.seed, self.tick, False)
+				send_mail(path_to_file, False)
+				return None
+
 			self.screen.blit(track, (path[p+1][0]*12, path[p+1][1]*8))
 
 class Sprite():
@@ -140,6 +160,7 @@ class Sprite():
 		self.path = []
 		self.priority = "eat"
 		self.selected = False
+		self.last_pos = None
 		if ver == "graphic":
 			self.img = pygame.image.load("stuff/pic/{}".format(image)).convert_alpha()
 			self.rect = self.img.get_rect()
@@ -256,6 +277,7 @@ class Sprite():
 				return False
 		return True
 	def update(self):
+		self.last_pos = (self.x, self.y)
 		newpos = self.move()
 		if newpos == None:
 			pass #for objects like corpses and grass that doesn't move
@@ -361,7 +383,7 @@ class Sprite():
 		else:
 			return False
 	def pathes_are_shortest_possible(self, opposites):
-		if len(self.path) + len(self.significant_other.path) + 2 == min(set(self.get_distance_from((self.x, self.y), oposite) for oposite in opposites)):
+		if len(self.path) + len(self.significant_other.path) + 1 == min(self.get_distance_from((self.x, self.y), oposite) for oposite in opposites):
 			return True
 		else:
 			return False
@@ -521,13 +543,13 @@ class Run():
 		global ver
 		ver = version
 
-		if values.seed == "random":
-			seed = int(random.random()*10**17)
-		else:
-			seed = values.seed
-		random.seed(seed)
-
 		mapa = Map(values.map_height, values.map_width)
+
+		if values.seed == "random":
+			mapa.seed = int(random.random()*10**17)
+		else:
+			mapa.seed = values.seed
+		random.seed(mapa.seed)
 
 		for i in range(values.Dogs):
 			mapa.add_dog(Dog(random.randint(1, mapa.x-2), random.randint(1, mapa.y -2), mapa.ID, mapa))
@@ -557,17 +579,21 @@ class Run():
 		wait = time()
 		paused = False
 		sprite = Sprite(None, None, None, None, "stone.png")
+		Clock = pygame.time.Clock()
 		try:
 			while go:
-				if ver == "graphic" and values.FPS > 0:
-					pygame.time.Clock().tick(values.FPS)
-				elif ver == "text" and values.FPS > 0:
+				if ver == "graphic" and values.UPS > 0:
+					pass  # f1: get time I can spend
+				elif ver == "text" and values.UPS > 0:
 					wait = time()
 				if not paused or one_more_frame:
 					mapa.tick += 1
 					mapa.update()
 
-				mapa.draw()
+				for frame in range(values.FPU):  # f1: spend ALL time I can (splitted into equal parts per FPU)
+					mapa.draw(frame)
+					Clock.tick(values.UPS*values.FPU)
+					#Clock.tick_busy_loop(values.UPS*values.FPU)
 				if ver == "graphic":
 					one_more_frame = False
 					cursor_pos = pygame.mouse.get_pos()
@@ -616,9 +642,9 @@ class Run():
 						elif event.type == pygame.QUIT:
 							sys.exit()
 
-				elif ver == "text" and values.FPS > 0:
+				elif ver == "text" and values.UPS > 0:
 					wait = time()
-					waitfor = 1/values.FPS + time() - wait
+					waitfor = 1/values.UPS + time() - wait
 					if waitfor > 0:
 						sleep(waitfor)
 			print("Simulation stopped at tick {tick}.".format(tick=mapa.tick))
@@ -633,8 +659,8 @@ class Run():
 				mapa.screen.blit(crash_img, crash_rect)
 				pygame.display.update()
 			print("\n\nSomething happened and the program is about to crash")
-			print("\nseed:{seed}\ntick:{tick}".format(seed = seed, tick = mapa.tick))
-			path_to_file = write_log_file(seed, mapa.tick)
+			print("\nseed:{seed}\ntick:{tick}".format(seed = mapa.seed, tick = mapa.tick))
+			path_to_file = write_log_file(mapa.seed, mapa.tick)
 			send_mail(path_to_file)
-			input("\nPress Enter to crash")
+			#input("\nPress Enter to crash")
 			raise

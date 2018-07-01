@@ -4,7 +4,7 @@ import sys
 
 from stuff import values
 
-def write_log_file(seed, tick):
+def write_log_file(seed, tick, crashed=True):
 
 	path = "{path}\\logs".format(path = sys.path[0])
 	current_time = str(datetime.now()).replace(":", "_").split(".")[0]
@@ -52,13 +52,24 @@ def write_log_file(seed, tick):
 			file.write(file_str)
 		print("\nCreated a log file\n'{file_name}.txt'\nat location\n'{path}'".format(file_name = current_time, path = path))
 	else:
-		print("\nThat crash is already reported in a log file\n'{file_name}'\nat location\n'{path}'".format(file_name = file_name, path = path))
+		if crashed:
+			that_crash = "That crash"
+		else:
+			that_crash = "It"
+		print("\n{that_crash} is already reported in a log file\n'{file_name}'\nat location\n'{path}'".format(that_crash = that_crash, file_name = file_name, path = path))
 	return path_to_file
 
-def send_mail(file):
-	print("""\n\nPlease send us mail to DogsAndSheepsSupp@gmail.com and describe what were you doing before the crash
+def send_mail(file, crashed=True):
+	if crashed:
+		print("""\n\nPlease send us mail to DogsAndSheepsSupp@gmail.com and describe what were you doing before the crash
 please include '{file}' in the crash report
 We will inform you about the progress and fix the crash as soon as possible.""".format(
 	file = file,
 	))
+	else:
+		print("""\n\nPlease send us mail to DogsAndSheepsSupp@gmail.com including
+'{file}'""".format(
+	file = file,
+	))
+
 #For now we are banning that seed on your device, so it will not be randomly picked again.

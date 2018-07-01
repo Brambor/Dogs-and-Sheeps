@@ -1,3 +1,14 @@
+1.0.2
+
+Changes
+- Smooth moving: FPS (frames per second) splitted into UPS (updates per second) and FPU (frames per update)
+
+Bugfixes
+- Fixed: Sheep would always search for opposite, even when their path is shortest possible (performance improvement)
+
+Few tweeks in code
+-for performance, readability
+
 1.0.1
 
 Select

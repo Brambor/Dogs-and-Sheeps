@@ -1,7 +1,7 @@
 UPS = 30 #updates (or turns) per second; any natural number; 0 means as much as possible; default = 30
 FPU = 4 # Frames per update (or turn); any natural number; default = 4
-map_width = 120 #Map width; any natural number higher than 2; default = 60
-map_height = 50 #Map height; any natural number higher than 2; default = 25
+map_width = 119 #Map width; any natural number higher than 2; default = 60
+map_height = 30 #Map height; any natural number higher than 2; default = 25
 seed = 31597888809742680 #Decides what should happen when event is random such as place of generated grass, speed of Sheep_baby evolving, running while idle etc. same seeds result in identical simulations; anything, "random" means that it will be picked at random; default = "random"
 
 Dogs = 3 #Starting numer of Dogs; any natural number; default = 2

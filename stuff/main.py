@@ -578,8 +578,9 @@ class Run():
 		go = True
 		wait = time()
 		paused = False
-		sprite = Sprite(None, None, None, None, "stone.png")
-		Clock = pygame.time.Clock()
+		if ver == 'graphic':
+			sprite = Sprite(None, None, None, None, "stone.png")
+			Clock = pygame.time.Clock()
 		try:
 			while go:
 				if ver == "graphic" and values.UPS > 0:
@@ -589,12 +590,12 @@ class Run():
 				if not paused or one_more_frame:
 					mapa.tick += 1
 					mapa.update()
-
-				for frame in range(values.FPU):  # f1: spend ALL time I can (splitted into equal parts per FPU)
-					mapa.draw(frame)
-					Clock.tick(values.UPS*values.FPU)
-					#Clock.tick_busy_loop(values.UPS*values.FPU)
 				if ver == "graphic":
+					for frame in range(values.FPU):  # f1: spend ALL time I can (splitted into equal parts per FPU)
+						mapa.draw(frame)
+						Clock.tick(values.UPS*values.FPU)
+						#Clock.tick_busy_loop(values.UPS*values.FPU)
+
 					one_more_frame = False
 					cursor_pos = pygame.mouse.get_pos()
 					cursor_pos = (int(cursor_pos[0]/12), int(cursor_pos[1]/8))
@@ -647,6 +648,7 @@ class Run():
 					waitfor = 1/values.UPS + time() - wait
 					if waitfor > 0:
 						sleep(waitfor)
+					mapa.draw()
 			print("Simulation stopped at tick {tick}.".format(tick=mapa.tick))
 		except SystemExit:
 			raise

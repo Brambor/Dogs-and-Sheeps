@@ -61,9 +61,9 @@ def write_log_file(seed, tick, crashed=True):
 
 def send_mail(file, crashed=True):
 	if crashed:
-		print("""\n\nPlease send us mail to DogsAndSheepsSupp@gmail.com and describe what were you doing before the crash
-please include '{file}' in the crash report
-We will inform you about the progress and fix the crash as soon as possible.""".format(
+		print(("\n\nPlease send us mail to DogsAndSheepsSupp@gmail.com and describe what were you doing before the crash.\n"
+				"Please include '{file}' in the crash report.\n"
+				"We will inform you about the progress and fix the crash as soon as possible.").format(
 	file = file,
 	))
 	else:

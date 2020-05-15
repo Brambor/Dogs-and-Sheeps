@@ -41,17 +41,19 @@ while True:
 				for button in buttons:
 					if button.rect.left < pos[0] < button.rect.right and button.rect.top < pos[1] < button.rect.bottom:
 						if button.name == "Play":
-							print("""press
-ESC to open menu
-space to stop the simulation
-\t'f' while stopped to move one frame forward
+							print(
+								"press\n"
+								"ESC to open menu\n"
+								"space to stop the simulation\n"
+								"\t'f' while stopped to move one frame forward\n\n"
 
-'a' to select all sheep
-'d' to deselect all sheep
-'t' to toggle selected on all sheep
-click on a sheep to toggle selected
+								"'a' to select all sheep\n"
+								"'d' to deselect all sheep\n"
+								"'t' to toggle selected on all sheep\n"
+								"click on a sheep to toggle selected\n\n"
 
-hower over a sheep to show the path it's taking""")
+								"hower over a sheep to show the path it's taking\n"
+							)
 							main.Run(ver)
 						elif button.name == "Quit":
 							sys.exit()

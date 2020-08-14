@@ -2,4 +2,7 @@
 
 *.idea
 
-vien/*
+vien
+
+# specific to this project
+logs

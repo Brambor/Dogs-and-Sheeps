@@ -5,6 +5,9 @@ import sys
 from stuff import values
 
 def write_log_file(seed, tick, crashed=True):
+	if crashed:
+		print("\n\nSomething happened and the program is about to crash")
+		print(f"\nseed:{seed}\ntick:{tick}")
 
 	path = "{path}\\logs".format(path = sys.path[0])
 	current_time = str(datetime.now()).replace(":", "_").split(".")[0]
@@ -50,14 +53,13 @@ def write_log_file(seed, tick, crashed=True):
 		path_to_file = "{path}\\{current_time}.txt".format(path = path, current_time = current_time)
 		with open(path_to_file, "w") as file:
 			file.write(file_str)
+		if not crashed:
+			print("\n\nSomething happened and we wrote a log file,")
+			print(f"\nseed:{seed}\ntick:{tick}")
 		print("\nCreated a log file\n'{file_name}.txt'\nat location\n'{path}'".format(file_name = current_time, path = path))
 	else:
-		if crashed:
-			that_crash = "That crash"
-		else:
-			that_crash = "It"
-		print("\n{that_crash} is already reported in a log file\n'{file_name}'\nat location\n'{path}'".format(that_crash = that_crash, file_name = file_name, path = path))
-	return path_to_file
+		return
+	send_mail(path_to_file, crashed)
 
 def send_mail(file, crashed=True):
 	if crashed:

@@ -5,6 +5,7 @@ import queue
 import sys
 
 from stuff import values
+from stuff.crash_catcher import write_log_file
 
 try:
 	import pygame
@@ -143,12 +144,8 @@ class Map():
 					]
 				]
 			except ValueError:
-				from stuff.crash_catcher import write_log_file, send_mail
-				print("\n\nSomething happened and we wrote a log file,")
-				print("\nseed:{seed}\ntick:{tick}".format(seed = self.seed, tick = self.tick))
-				path_to_file = write_log_file(self.seed, self.tick, False)
-				send_mail(path_to_file, False)
-				return None
+				write_log_file(self.seed, self.tick, crashed=False)
+				return
 
 			self.screen.blit(track, (path[p+1][0]*12, path[p+1][1]*8))
 
@@ -653,16 +650,12 @@ class Run():
 		except SystemExit:
 			raise
 		except:
-			from stuff.crash_catcher import write_log_file, send_mail
 			if ver == "graphic":
 				crash_img = pygame.image.load("stuff/pic/crash.png").convert_alpha()
 				crash_rect = crash_img.get_rect()
 				crash_rect.center = (values.map_width*6, values.map_height*4)
 				mapa.screen.blit(crash_img, crash_rect)
 				pygame.display.update()
-			print("\n\nSomething happened and the program is about to crash")
-			print("\nseed:{seed}\ntick:{tick}".format(seed = mapa.seed, tick = mapa.tick))
-			path_to_file = write_log_file(mapa.seed, mapa.tick)
-			send_mail(path_to_file)
+			write_log_file(mapa.seed, mapa.tick)
 			#input("\nPress Enter to crash")
 			raise

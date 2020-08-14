@@ -1,8 +1,10 @@
 import heapq
-import random
-from time import sleep, time
 import queue
+import random
 import sys
+
+from itertools import chain
+from time import sleep, time
 
 from stuff import values
 from stuff.crash_catcher import write_log_file
@@ -105,14 +107,9 @@ class Map():
 			self.wait = random.randint(*values.Grass_spawn_rate)
 			self.addg(Grass(random.randint(1, self.x - 2), random.randint(1, self.y - 2), self)) # idea: grass should not be spawning on occupied tiles
 	def get_impassable_objects(self):
-		return self.sheep + self.sheep_babies + self.dogs + self.corpses + self.stone
+		return chain(self.sheep, self.sheep_babies, self.dogs, self.corpses, self.stone)
 	def get_all_sheep_pathes(self):
-		to_return = set()
-		for obj in self.sheep + self.sheep_babies:
-			if obj.path_exists:
-				for p in obj.path:
-					to_return.add(p)
-		return to_return
+		return set(chain.from_iterable(obj.path for obj in chain(self.sheep, self.sheep_babies) if obj.path_exists))
 	def draw_path(self, obj):
 		path = obj.path + [(obj.x, obj.y)]
 		if obj.last_pos != None:
@@ -121,7 +118,7 @@ class Map():
 		else:
 			used_last_pos = False
 		if len(path) < 2 + used_last_pos:
-			return None
+			return
 		path = [(p1, p0) for p0, p1 in path]
 
 		self.screen.blit(self.track["cross"], (path[0][0]*12, path[0][1]*8))
@@ -165,18 +162,14 @@ class Sprite():
 		pass
 	def closest(self, ents):
 		self.target = ents[min((abs(self.x - ent.x) + abs(self.y - ent.y), i) for i, ent in enumerate(ents))[1]]
-	def get_distance_from(self, thing, target):
-		return abs(thing[0] - target.x) + abs(thing[1] - target.y)
+	def get_distance_from(self, target):
+		return abs(self.x - target.x) + abs(self.y - target.y)
 	def get_shortest_distance_from(self, thing, targets):
 		return min(abs(thing[0] - target[0]) + abs(thing[1] - target[1]) for target in targets)
 	def get_objs_by_position(self, objs, pos):
-		to_return = set()
-		for obj in objs:
-			if obj.x == pos[0] and obj.y == pos[1]:
-				to_return.add(obj)
-		return to_return
+		return set(obj for obj in objs if obj.x == pos[0] and obj.y == pos[1])
 	def get_opposites(self):
-		return set(filter(lambda obj: obj.priority == "augment" and self.ID != obj.ID, self.mapa.sheep))
+		return set(obj for obj in self.mapa.sheep if obj.priority == "augment" and self.ID != obj.ID)
 	def runto(self):
 		ax = abs(self.x - self.target.x)
 		ay = abs(self.y - self.target.y)
@@ -220,7 +213,7 @@ class Sprite():
 	def eat(self, eatit):
 		toeat = self.eat_per_turn
 		for obj in self.mapa.corpses + self.mapa.grass:
-			if abs(self.x - obj.x) + abs(self.y - obj.y) == 1 and eatit == obj.znak:
+			if self.get_distance_from(obj) == 1 and eatit == obj.znak:
 				if toeat > obj.food:
 					toeat = obj.food
 				obj.food -= toeat
@@ -235,10 +228,6 @@ class Sprite():
 			if self.mapa.grass:
 				if self.search_for_grass():
 					return self.path.pop()
-	def next_to_grass(self):
-		for obj in self.mapa.grass:
-			if abs(self.x - obj.x) + abs(self.y - obj.y) == 1:
-				return True
 	def search_for_grass(self):
 		if self.path_exists:
 			if self.what_i_want_to_get_to in self.mapa.grass:
@@ -251,10 +240,6 @@ class Sprite():
 		self.path = []
 		self.path_exists = False
 		return False
-	def next_to_opposite(self, opposites):
-		for obj in opposites:
-			if abs(self.x - obj.x) + abs(self.y - obj.y) == 1:
-				return True
 	def search_for_opposite(self, opposites):
 		if self.significant_other in opposites:
 			if self.significant_other.significant_other == self:
@@ -269,17 +254,14 @@ class Sprite():
 		return False
 
 	def validate(self, goto):
-		for obj in self.mapa.sheep + self.mapa.sheep_babies + self.mapa.dogs + self.mapa.corpses + self.mapa.stone:
-			if goto[0] == obj.x and goto[1] == obj.y:
-				return False
-		return True
+		return not any(goto[0] == obj.x and goto[1] == obj.y for obj in self.mapa.get_impassable_objects())
+
 	def update(self):
 		self.last_pos = (self.x, self.y)
 		newpos = self.move()
-		if newpos == None:
-			pass #for objects like corpses and grass that doesn't move
-		elif self.validate(newpos):
+		if newpos != None and self.validate(newpos):
 			self.x, self.y = newpos
+
 	def find_path(self, valid_targets, passable, purpose = "eat"):
 		targets = set((target.x, target.y) for target in valid_targets)
 		valid_targets = set(valid_targets)
@@ -320,7 +302,7 @@ class Sprite():
 
 			self.path_exists = True
 			#save target
-			objs = self.get_objs_by_position(self.mapa.sheep + self.mapa.sheep_babies + self.mapa.dogs + self.mapa.grass + self.mapa.corpses, next_tile)
+			objs = self.get_objs_by_position(chain(self.mapa.sheep, self.mapa.sheep_babies, self.mapa.dogs, self.mapa.grass, self.mapa.corpses), next_tile)
 			self.what_i_want_to_get_to = (objs & valid_targets).pop() #TODO"optimalization":? save whole tuple (then iterate)
 			if purpose == "augment":
 				self.significant_other = self.what_i_want_to_get_to
@@ -370,23 +352,17 @@ class Sprite():
 			return True
 
 	def path_is_not_blocked(self, path):
-		for tile in path:
-			if not self.validate(tile):
-				return False
-		return True
+		return all(self.validate(tile) for tile in path)
+
 	def path_is_shortest_possible(self, valid_targets):
-		if len(self.path) + 1 == min(self.get_distance_from((self.x, self.y), target) for target in valid_targets):
-			return True
-		else:
-			return False
+		return len(self.path) + 1 == min(self.get_distance_from(target) for target in valid_targets)
+
 	def pathes_are_shortest_possible(self, opposites):
-		if len(self.path) + len(self.significant_other.path) + 1 == min(self.get_distance_from((self.x, self.y), oposite) for oposite in opposites):
-			return True
-		else:
-			return False
+		return len(self.path) + len(self.significant_other.path) + 1 == min(self.get_distance_from(oposite) for oposite in opposites)
+
 	def augment(self, opposites):
 		for obj in opposites:
-			if abs(self.x - obj.x) + abs(self.y - obj.y) == 1:
+			if self.get_distance_from(obj) == 1:
 				self.hungry, obj.hungry = self.hungry - values.Sheep_rp_food_consume, obj.hungry - values.Sheep_rp_food_consume
 				self.priority, obj.priority = ["eat"]*2
 				self.significant_other, obj.significant_other = [None]*2
@@ -515,7 +491,6 @@ class Corpse(Sprite):
 	def move(self):
 		if self.food == 0:
 			self.mapa.corpses.remove(self)
-		return None
 
 class Grass(Sprite):
 	def __init__(self, y, x, mapa):
@@ -529,7 +504,6 @@ class Grass(Sprite):
 				self.food += values.Grass_grow
 				if self.food > values.Grass_max:
 					self.food = values.Grass_max
-		return None
 
 class Stone(Sprite):
 	def __init__(self, y, x, mapa):
@@ -596,7 +570,7 @@ class Run():
 					one_more_frame = False
 					cursor_pos = pygame.mouse.get_pos()
 					cursor_pos = (int(cursor_pos[0]/12), int(cursor_pos[1]/8))
-					objs = sprite.get_objs_by_position(mapa.sheep + mapa.sheep_babies, (cursor_pos[1], cursor_pos[0]))
+					objs = sprite.get_objs_by_position(chain(mapa.sheep, mapa.sheep_babies), (cursor_pos[1], cursor_pos[0]))
 					for obj in objs:
 						mapa.colouring = [obj]
 						if obj.znak == "S":

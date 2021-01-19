@@ -139,9 +139,9 @@ class Map():
 		path = [(p1, p0) for p0, p1 in path]
 
 		self.screen.blit(self.track["cross"], (path[0][0]*12, path[0][1]*8))
-		for p in range(len(path) - 2):
-			to_directions = (path[p][0] - path[p+1][0], path[p][1] - path[p+1][1])
-			from_directions = (path[p+1][0] - path[p+2][0], path[p+1][1] - path[p+2][1])
+		for prev_tile, cur_tile, next_tile in zip(path, path[1:], path[2:]):
+			to_directions = (prev_tile[0] - cur_tile[0], prev_tile[1] - cur_tile[1])
+			from_directions = (cur_tile[0] - next_tile[0], cur_tile[1] - next_tile[1])
 			if (from_directions, to_directions) not in directions_to_filename:
 				# this happens when obj moved to some direction
 				# and now has to go the opposite direction
@@ -149,7 +149,7 @@ class Map():
 				continue
 			track = self.track[directions_to_filename[(from_directions, to_directions)]]
 
-			self.screen.blit(track, (path[p+1][0]*12, path[p+1][1]*8))
+			self.screen.blit(track, (cur_tile[0]*12, cur_tile[1]*8))
 
 class Sprite():
 	def __init__(self, znak, y, x, mapa, image):

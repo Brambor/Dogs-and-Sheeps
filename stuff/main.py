@@ -206,15 +206,21 @@ class Sprite():
 		elif self.znak == "D":
 			self.hungry -= values.Dog_hungry
 		if self.hungry <= 0:
-			self.mapa.addc(Corpse(self.y, self.x, self.mapa, self.food))
-			if self.znak == "S":
-				self.mapa.sheep.remove(self)
-			elif self.znak == "s":
-				self.mapa.sheep_babies.remove(self)
-			elif self.znak == "D":
-				self.mapa.dogs.remove(self)
+			self.die()
 		elif (self.znak == "S" and self.hungry < values.Sheep_I_am_hungry) or (self.znak == "s" and self.hungry < values.Sheep_baby_I_am_hungry) or (self.znak == "D" and self.hungry < values.Dog_I_am_hungry):
 			self.priority = "eat"
+
+	def die(self):
+		self.mapa.addc(Corpse(self.y, self.x, self.mapa, self.food))
+		if self.znak == "S":
+			self.mapa.sheep.remove(self)
+		elif self.znak == "s":
+			self.mapa.sheep_babies.remove(self)
+		elif self.znak == "D":
+			self.mapa.dogs.remove(self)
+		else:
+			raise NotImplementedError
+
 	def eat(self, eatit):
 		toeat = self.eat_per_turn
 		for obj in chain(self.mapa.corpses, self.mapa.grass):
@@ -411,11 +417,7 @@ class Dog(Sprite):
 					self.closest(gofor)# from here
 					goto = self.runto()
 					if goto == None:
-						self.mapa.addc(Corpse(self.target.y, self.target.x, self.mapa, self.target.food))
-						if self.target.znak == "S":
-							self.mapa.sheep.remove(self.target)
-						if self.target.znak == "s":
-							self.mapa.sheep_babies.remove(self.target)
+						self.target.die()
 		else:
 			beh = random.randint(0, 175)
 			goto = self.runrand(beh)

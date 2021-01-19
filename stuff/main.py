@@ -13,6 +13,24 @@ try:
 except ImportError:
 	pass
 
+
+#0: (0, -1) 1: (1, 0) 2: (0, 1) 3: (-1, 0)
+directions_to_filename = {
+	(( 0,  1), ( 1,  0)): "01",
+	((-1,  0), ( 0, -1)): "01",
+	(( 0,  1), ( 0,  1)): "02",
+	(( 0, -1), ( 0, -1)): "02",
+	(( 0,  1), (-1,  0)): "03",
+	(( 1,  0), ( 0, -1)): "03",
+	((-1,  0), ( 0,  1)): "12",
+	(( 0, -1), ( 1,  0)): "12",
+	(( 1,  0), ( 1,  0)): "13",
+	((-1,  0), (-1,  0)): "13",
+	(( 0, -1), (-1,  0)): "23",
+	(( 1,  0), ( 0,  1)): "23",
+}
+
+
 class PathFound(Exception):
 	pass
 
@@ -124,24 +142,12 @@ class Map():
 		for p in range(len(path) - 2):
 			to_directions = (path[p][0] - path[p+1][0], path[p][1] - path[p+1][1])
 			from_directions = (path[p+1][0] - path[p+2][0], path[p+1][1] - path[p+2][1])
-			#0: (0, -1) 1: (1, 0) 2: (0, 1) 3: (-1, 0)
-			matrix = (
-				((0, 1), (1, 0)), ((-1, 0), (0, -1)),
-				((0, 1), (0, 1)), ((0, -1), (0, -1)),
-				((0, 1), (-1, 0)), ((1, 0), (0, -1)),
-				((-1, 0), (0, 1)), ((0, -1), (1, 0)),
-				((1, 0), (1, 0)), ((-1, 0), (-1, 0)),
-				((0, -1), (-1, 0)), ((1, 0), (0, 1)),
-			)
-			try:
-				track = self.track[
-					("01", "02", "03", "12", "13", "23")[
-						int(matrix.index((from_directions, to_directions))/2)
-					]
-				]
-			except ValueError:
-				write_log_file(self.seed, self.tick, crashed=False)
-				return
+			if (from_directions, to_directions) not in directions_to_filename:
+				# this happens when obj moved to some direction
+				# and now has to go the opposite direction
+				# or when obj just stood in place...
+				continue
+			track = self.track[directions_to_filename[(from_directions, to_directions)]]
 
 			self.screen.blit(track, (path[p+1][0]*12, path[p+1][1]*8))
 

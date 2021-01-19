@@ -207,7 +207,10 @@ class Sprite():
 			self.hungry -= values.Dog_hungry
 		if self.hungry <= 0:
 			self.die()
-		elif (self.znak == "S" and self.hungry < values.Sheep_I_am_hungry) or (self.znak == "s" and self.hungry < values.Sheep_baby_I_am_hungry) or (self.znak == "D" and self.hungry < values.Dog_I_am_hungry):
+		elif ( (self.znak == "S" and self.hungry < values.Sheep_I_am_hungry)
+			or (self.znak == "s" and self.hungry < values.Sheep_baby_I_am_hungry)
+			or (self.znak == "D" and self.hungry < values.Dog_I_am_hungry)
+		):
 			self.priority = "eat"
 
 	def die(self):
@@ -229,7 +232,7 @@ class Sprite():
 					toeat = obj.food
 				obj.food -= toeat
 				self.hungry += toeat
-				self.am_i_full()
+				self.is_stomach_filled()
 				return True
 		return False
 	def herbivore(self):
@@ -422,7 +425,7 @@ class Dog(Sprite):
 			beh = random.randint(0, 175)
 			goto = self.runrand(beh)
 		return goto
-	def am_i_full(self):
+	def is_stomach_filled(self):
 		if self.hungry >= self.stomach:
 			self.priority = "augment"
 
@@ -457,7 +460,7 @@ class Sheep(Sprite):
 			beh = random.randint(0, self.run)
 			goto = self.runrand(beh)
 		return goto
-	def am_i_full(self):
+	def is_stomach_filled(self):
 		if self.hungry >= self.stomach:
 			self.priority = "augment"
 
@@ -487,7 +490,7 @@ class Sheep_baby(Sprite):
 			beh = random.randint(0, self.run)
 			goto = self.runrand(beh)
 		return goto
-	def am_i_full(self):
+	def is_stomach_filled(self):
 		if self.hungry >= self.stomach:
 			self.priority = "evolve"
 

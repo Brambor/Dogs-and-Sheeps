@@ -82,16 +82,16 @@ class Map():
 					self.last_colouring = (self.colouring, self.tick)
 				self.colouring = None
 
-			for obj in self.sheep + self.sheep_babies:
+			for obj in chain(self.sheep, self.sheep_babies):
 				if obj.selected:
 					self.draw_path(obj)
 			
 			# <- on top <-
-			for obj in self.grass + self.stone + self.corpses:
+			for obj in chain(self.grass, self.stone, self.corpses):
 				obj.rect.topleft = (obj.y*12, obj.x*8)
 				self.screen.blit(obj.img, obj.rect)
 			
-			for obj in self.sheep + self.sheep_babies + self.dogs:
+			for obj in chain(self.sheep, self.sheep_babies, self.dogs):
 				if obj.last_pos == None:
 					obj.rect.topleft = (obj.y*12, obj.x*8)
 					self.screen.blit(obj.img, obj.rect)
@@ -106,7 +106,7 @@ class Map():
 			x, y = self.x, self.y
 			pole = [[" "]*x for i in range(y)]
 
-			for obj in self.grass + self.stone + self.corpses + self.sheep + self.sheep_babies + self.dogs:
+			for obj in chain(self.grass, self.stone, self.corpses, self.sheep, self.sheep_babies, self.dogs):
 				pole[obj.x][obj.y] = obj.znak
 			
 			for row in range(y):
@@ -117,7 +117,7 @@ class Map():
 
 	def update(self):
 		# -> order -> (Sheep are always first)
-		for obj in self.sheep + self.sheep_babies + self.dogs + self.grass + self.corpses:
+		for obj in chain(self.sheep, self.sheep_babies, self.dogs, self.grass, self.corpses):
 			obj.update()
 		self.wait -= 1
 		if self.wait == 0:
@@ -217,7 +217,7 @@ class Sprite():
 			self.priority = "eat"
 	def eat(self, eatit):
 		toeat = self.eat_per_turn
-		for obj in self.mapa.corpses + self.mapa.grass:
+		for obj in chain(self.mapa.corpses, self.mapa.grass):
 			if self.get_distance_from(obj) == 1 and eatit == obj.znak:
 				if toeat > obj.food:
 					toeat = obj.food
@@ -588,34 +588,22 @@ class Run():
 							if event.key == pygame.K_ESCAPE:
 								go = False
 							elif event.key == pygame.K_SPACE:
-								if paused:
-									paused = False
-								else:
-									paused = True
+								paused = not paused
 							elif event.key == pygame.K_f:
 								one_more_frame = True
 							elif event.key == pygame.K_a:
-								for obj in mapa.sheep + mapa.sheep_babies:
+								for obj in chain(mapa.sheep, mapa.sheep_babies):
 									obj.selected = True
 							elif event.key == pygame.K_d:
-								for obj in mapa.sheep + mapa.sheep_babies:
+								for obj in chain(mapa.sheep, mapa.sheep_babies):
 									obj.selected = False
 							elif event.key == pygame.K_t:
-								for obj in mapa.sheep + mapa.sheep_babies:
-									if obj.selected:
-										obj.selected = False
-									else:
-										obj.selected = True
-
-						if event.type == pygame.MOUSEBUTTONDOWN:
+								for obj in chain(mapa.sheep, mapa.sheep_babies):
+									obj.selected = not obj.selected
+						elif event.type == pygame.MOUSEBUTTONDOWN:
 							if event.button == 1:
 								for obj in objs:
-									if obj.selected:
-										obj.selected = False
-									else:
-										obj.selected = True
-
-
+									obj.selected = not obj.selected
 						elif event.type == pygame.QUIT:
 							sys.exit()
 

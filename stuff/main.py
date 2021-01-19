@@ -50,7 +50,7 @@ class Map():
 
 			self.track = {}
 			for t in ["01", "02", "03", "12", "13", "23", "cross", "target"]:
-				self.track[t] = pygame.image.load("stuff/pic/track_{}.png".format(t)).convert_alpha()
+				self.track[t] = pygame.image.load(f"stuff/pic/track_{t}.png").convert_alpha()
 		self.corpses, self.grass, self.stone, self.ID = [], [], [], 0
 		self.sheep, self.sheep_babies, self.dogs = [], [], []
 		self.colouring = None
@@ -161,7 +161,7 @@ class Sprite():
 		self.selected = False
 		self.last_pos = None
 		if ver == "graphic":
-			self.img = pygame.image.load("stuff/pic/{}".format(image)).convert_alpha()
+			self.img = pygame.image.load(f"stuff/pic/{image}").convert_alpha()
 			self.rect = self.img.get_rect()
 	def move(self):
 		pass
@@ -613,7 +613,7 @@ class Run():
 					if waitfor > 0:
 						sleep(waitfor)
 					mapa.draw()
-			print("Simulation stopped at tick {tick}.".format(tick=mapa.tick))
+			print(f"Simulation stopped at tick {mapa.tick}.")
 		except SystemExit:
 			raise
 		except:

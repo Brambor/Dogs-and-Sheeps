@@ -122,11 +122,21 @@ class Map():
 		self.wait -= 1
 		if self.wait == 0:
 			self.wait = random.randint(*values.Grass_spawn_rate)
-			self.addg(Grass(random.randint(1, self.x - 2), random.randint(1, self.y - 2), self)) # idea: grass should not be spawning on occupied tiles
+			self.addg(Grass(*self.get_random_pos(), self)) # idea: grass should not be spawning on occupied tiles
 	def get_impassable_objects(self):
 		return chain(self.sheep, self.sheep_babies, self.dogs, self.corpses, self.stone)
 	def get_all_sheep_pathes(self):
 		return set(chain.from_iterable(obj.path for obj in chain(self.sheep, self.sheep_babies) if obj.path_exists))
+	def get_random_pos(self, avoid_perimeter_stones=True):
+		"""
+		return random position in map
+
+		ignore whether tile is occupied (with the exception of avoid_perimeter_stones)
+		"""
+		if avoid_perimeter_stones:
+			return random.randint(1, self.x-2), random.randint(1, self.y-2)
+		else:
+			return random.randint(0, self.x-1), random.randint(0, self.y-1)
 	def draw_path(self, obj):
 		path = obj.path + [(obj.x, obj.y)]
 		if obj.last_pos != None:
@@ -533,16 +543,16 @@ class Run():
 		random.seed(mapa.seed)
 
 		for i in range(values.Dogs):
-			mapa.add_dog(Dog(random.randint(1, mapa.x-2), random.randint(1, mapa.y -2), mapa.ID, mapa))
+			mapa.add_dog(Dog(*mapa.get_random_pos(), mapa.ID, mapa))
 			
 		for i in range(values.Sheep):
-			mapa.add_sheep(Sheep(random.randint(1, mapa.x-2), random.randint(1, mapa.y -2), mapa.ID, mapa))
+			mapa.add_sheep(Sheep(*mapa.get_random_pos(), mapa.ID, mapa))
 
 		for i in range(values.Sheep_baby):
-			mapa.add_sheep_baby(Sheep_baby(random.randint(1, mapa.x-2), random.randint(1, mapa.y -2), mapa.ID, mapa))
+			mapa.add_sheep_baby(Sheep_baby(*mapa.get_random_pos(), mapa.ID, mapa))
 			
 		for i in range(values.Grass):
-			mapa.addg(Grass(random.randint(1, mapa.x-2), random.randint(1, mapa.y -2), mapa))
+			mapa.addg(Grass(*mapa.get_random_pos(), mapa))
 
 		for i in range(mapa.y):
 			mapa.adds(Stone(0, i, mapa))

@@ -1,12 +1,27 @@
-# Dogs-and-Sheeps
-This is a little simulation created to learn class in python. I will improve it over time.
+# Introduction
+Dogs-and-Sheeps is a little simulation created to learn classes in python. I will improve it over time.
 
-Features:Dogs hounting Sheep, killing them and eating their Corpses. Sheep searching for Grass and eating it then reproduce with other Sheep. Grass that grows.
-Easy way to change map dimensions, FPS, number of Dogs, Sheep, Grass.
-Graphic (not badass old film look...)
+# Features
+### Living organisms
 
-Ideas: rocks (these are on the way!), better searching for target (speed of it), dying of old age OR fight, zombie sheeps (not sure), tourists, Bacas, ghosts, water - lots and lots changes related to it, better changing values system, and more!
+ - Dogs hunting Sheep, killing them and eating their Corpses.
+ - Sheep searching for Grass and eating.
+ - Sheep reproducing with other Sheep.
+ - Grass that grows.
 
-Short and small preview (now Sheep are smarter):
+### Settings
 
-![Screenshot](https://github.com/Brambor/Dogs-and-Sheeps/blob/Graphic/pic/Dogs%26Sheeps.gif?raw=true "Screenshot")
+ - Easy way to change map dimensions, FPS, number of Dogs, Sheep, Grass.
+
+### Graphics
+
+ - Plain old Graphic (not badass old film look...)
+ - Pure text (without some features)
+
+# Lots of Ideas
+Rocks (these are on the way!), better searching for a target (speed of it), dying of old age OR fight, zombie sheep (not sure), tourists, Bacas, ghosts, water - lots and lots changes related to it, better value changing system, and more!
+
+# Short and small preview
+Bare in mind that Sheep are smarter now.
+
+![Screenshot](https://github.com/Brambor/Dogs-and-Sheeps/blob/master/stuff/pic/Dogs%26Sheeps.gif?raw=true "Screenshot")

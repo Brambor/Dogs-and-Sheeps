@@ -85,12 +85,12 @@ class Map():
 			for obj in chain(self.sheep, self.sheep_babies):
 				if obj.selected:
 					self.draw_path(obj)
-			
+
 			# <- on top <-
 			for obj in chain(self.grass, self.stone, self.corpses):
 				obj.rect.topleft = (obj.y*12, obj.x*8)
 				self.screen.blit(obj.img, obj.rect)
-			
+
 			for obj in chain(self.sheep, self.sheep_babies, self.dogs):
 				if obj.last_pos == None:
 					obj.rect.topleft = (obj.y*12, obj.x*8)
@@ -100,7 +100,7 @@ class Map():
 					self.screen.blit(obj.img, obj.rect)
 
 			pygame.display.update()
-			
+
 		elif ver == "text":
 
 			x, y = self.x, self.y
@@ -108,7 +108,7 @@ class Map():
 
 			for obj in chain(self.grass, self.stone, self.corpses, self.sheep, self.sheep_babies, self.dogs):
 				pole[obj.x][obj.y] = obj.znak
-			
+
 			for row in range(y):
 				pole[row] = "".join(pole[row])
 			pole = "\n".join(pole)
@@ -544,13 +544,13 @@ class Run():
 
 		for i in range(values.Dogs):
 			mapa.add_dog(Dog(*mapa.get_random_pos(), mapa.ID, mapa))
-			
+
 		for i in range(values.Sheep):
 			mapa.add_sheep(Sheep(*mapa.get_random_pos(), mapa.ID, mapa))
 
 		for i in range(values.Sheep_baby):
 			mapa.add_sheep_baby(Sheep_baby(*mapa.get_random_pos(), mapa.ID, mapa))
-			
+
 		for i in range(values.Grass):
 			mapa.addg(Grass(*mapa.get_random_pos(), mapa))
 

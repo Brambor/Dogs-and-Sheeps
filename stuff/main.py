@@ -255,6 +255,10 @@ class Map():
 	def get_objs_by_position(self, y, x):
 		return set(self.map[y][x])
 
+	def adjacent_pos(self, position):
+		for offset in ((1,0), (0,1), (-1,0), (0,-1)):
+			yield (position[0] + offset[0], position[1] + offset[1])
+
 class Sprite():
 	def __init__(self, znak, mapa, image):
 		self.znak = znak
@@ -339,16 +343,16 @@ class Sprite():
 		self.mapa.remove_obj(self)
 
 	def eat(self, eatit):
-		toeat = self.eat_per_turn
-		for obj in chain(self.mapa.corpses, self.mapa.grass):
-			if self.get_distance_from(obj) == 1 and eatit == obj.znak:
-				if toeat > obj.food:
-					toeat = obj.food
-				obj.food -= toeat
-				self.hungry += toeat
-				self.is_stomach_filled()
-				return True
+		for pos in self.mapa.adjacent_pos(self.mapa.get_pos(self)):
+			for obj in self.mapa.get_objs_by_position(*pos):
+				if eatit == obj.znak:
+					toeat = min(obj.food, self.eat_per_turn)
+					obj.food -= toeat
+					self.hungry += toeat
+					self.is_stomach_filled()
+					return True
 		return False
+
 	def herbivore(self):
 		if self.eat("."):
 			return True
@@ -410,8 +414,7 @@ class Sprite():
 				source = heapq.heappop(min_heap)
 				next_step = -source[1] +1
 				ghost = source[2]
-				for offset in ((1,0), (0,1), (-1,0), (0,-1)):
-					next_tile = (ghost[0] + offset[0], ghost[1] + offset[1])
+				for next_tile in self.mapa.adjacent_pos(ghost):
 					if marked_map[next_tile[0]][next_tile[1]] == "&":
 						raise PathFound
 					elif marked_map[next_tile[0]][next_tile[1]] in passable:
@@ -444,8 +447,7 @@ class Sprite():
 			while True:
 				possible_tiles = [] #set() doesn't sort, so it has to be list
 				#TODO"moovement_direction": change_direction	boolean
-				for offset in ((1,0), (0,1), (-1,0), (0,-1)):
-					next_tile = (ghost[0] + offset[0], ghost[1] + offset[1])
+				for next_tile in self.mapa.adjacent_pos(ghost):
 					distance_from_beacon = marked_map[next_tile[0]][next_tile[1]]
 					if type(distance_from_beacon) == int:
 						possible_tiles.append((-distance_from_beacon, next_tile))

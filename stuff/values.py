@@ -1,3 +1,5 @@
+prefered_version = "graphic" # if "text" launch text version, otherwise try to run graphic version
+
 UPS = 30 #updates (or turns) per second; any natural number; 0 means as much as possible; default = 30
 FPU = 4 # Frames per update (or turn); any natural number; default = 4
 map_width = 119 #Map width; any natural number higher than 2; default = 60

@@ -2,18 +2,21 @@ import sys
 
 from stuff import main, values
 
-ver = "graphic"
 picnames = ["Play","Quit"]
-try:
-	import pygame
-
+ver = values.prefered_version
+if ver != "text":  # assuming graphic version
+	try:
+		import pygame
+	except ImportError:
+		ver = "text"
+		print("Graphic version is not suported because pygame is not instaled. Swiching to text version.")
+	ver = "graphic"
 	x, y = values.map_width*12, values.map_height*8
 	pygame.init()
 	screen = pygame.display.set_mode((x, y))
 	pygame.display.set_caption("Dogs & Sheeps")
 	#pygame.display.set_icon(pygame.image.load("pic/corpse.png")) #Later, I don't want to do it now...
 	bg_color=(0,0,0)
-
 
 	buttons = pygame.sprite.Group()
 	place = y/2 - 10 * (len(picnames) - 1) - 8
@@ -27,10 +30,8 @@ try:
 		buttons.add(button)
 
 	buttons.draw(screen)
-
-except ImportError:
+else:
 	ver = "text"
-	print("Graphic version is not suported because pygame is not instaled. Swiching to text version.")
 
 while True:
 	if ver == "graphic":
